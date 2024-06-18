@@ -9,56 +9,44 @@ function Typography() {
   return (
     <>
       <Container>
-        <h3 className="title">Fistory</h3>
+        <h3 className="title">Duckstory</h3>
         <div id="history">
           <Row>
             <Col md="12">
               <div className="history-line">
-              <span>2022</span>
+                <span>2024</span>
                 <h5>
-                  경영대학 학술제 금상<br></br>(Option Pricing Method using FFNN)<br></br><br></br>
-                  제 8회 DB GAPS 투자대회 <br></br> 금융동아리 부문 5위<br></br>
-                  수익률 부문 TOP 20
+                  KRX 전국 대학생 증권 · 파생상품 경시대회 1위<br></br>{" "}
+                  DB금융경제공모전 증권/자산운용 부문 가작
                 </h5>
               </div>
               <div className="history-line">
-              <span>2021</span>
+                <span>2023</span>
                 <h5>
-                  제 7회 DB GAPS 투자대회 본선 진출
+                  WorldQuant IQC Korea 2nd<br></br>
+                  신한 빅데이터 해커톤; 신한투자증권 우수상<br></br>
+                  동교인재상; 산업, 경영 부문<br></br>
+                  아주대학교 경영대학 학술제 금상 (Weekly VKOSPI)
                 </h5>
               </div>
               <div className="history-line">
-              <span>2018</span>
+                <span>2022</span>
                 <h5>
-                  경영대학 학술제 대상 <br></br>(한반도 이슈에 따른 주가예측모델설계)
+                  아주대학교 경영대학 학술제 금상 (Option Pricing With
+                  Deeplearning)<br></br>
+                  아주대학교 프로그래밍 콘테스트 Div2. 우수상<br></br>
+                  DB GAPS 금융동아리 5위
                 </h5>
               </div>
               <div className="history-line">
-              <span>2017</span>
+                <span>고등학생</span>
                 <h5>
-                  제 3회 DB GAPS 투자대회<br></br>금융동아리 부문 5위<br></br>
-                  수익률 부문 4위<br></br><br></br>
-                  경영대학 학술제 은상<br></br><br></br>
-                  따뜻한 시민금융아이디어 공모전 우수상
+                  인천광역시교육청 수학탐구발표대회 은상, 동상<br></br>
                 </h5>
               </div>
               <div className="history-line">
-              <span>2016</span>
-                <h5>
-                  경영대학 학술제 은상 수상
-                </h5>
-              </div>
-              <div className="history-line">
-              <span>2015</span>
-                <h5>
-                  경영대학 학술제 대상 <br></br>(내부자거래정보를 이용한 투자전략)
-                </h5>
-              </div>
-              <div className="history-line">
-              <span>2013</span>
-                <h5>
-                  FEPSI 창립
-                </h5>
+                <span>2001</span>
+                <h5>응애</h5>
               </div>
             </Col>
           </Row>

@@ -23,7 +23,8 @@ import CompleteExamples from "./index-sections/CompleteExamples.js";
 import SignUp from "./index-sections/SignUp.js";
 import Examples from "./index-sections/Examples.js";
 import Download from "./index-sections/Download.js";
-import Recruit from "./index-sections/recruit.js";
+// import Recruit from "./index-sections/Recruit.js";
+import SimpleContact from "./index-sections/SimpleContact.js";
 
 function Index() {
   React.useEffect(() => {
@@ -45,7 +46,8 @@ function Index() {
         <div className="main">
           <BasicElements />
           <Typography />
-          <Recruit />
+          {/* <Recruit /> */}
+          <SimpleContact />
           {/* <Navbars /> */}
           {/* <Tabs /> */}
           {/* <Pagination />

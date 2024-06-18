@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.3198fa80.css",
-    "main.js": "/static/js/main.fc0125bf.js",
+    "main.css": "/static/css/main.285d1a89.css",
+    "main.js": "/static/js/main.514f6d9a.js",
     "static/media/Tunnel.mp4": "/static/media/Tunnel.81bf6a0b9364edecb5b2.mp4",
     "static/media/PretendardVariable.woff2": "/static/media/PretendardVariable.2bc582461caf4e05b51d.woff2",
     "static/media/FE_background.png": "/static/media/FE_background.4dc7af911efbc4a74c04.png",
@@ -26,16 +26,13 @@
     "static/media/bg5.jpg": "/static/media/bg5.d60a95eb31d6400f802f.jpg",
     "static/media/bg8.jpg": "/static/media/bg8.2c89438b189a2a391f19.jpg",
     "static/media/landing.jpg": "/static/media/landing.6fa0380a8b02ebaadb6a.jpg",
-    "static/media/project2_1.jpg": "/static/media/project2_1.ceabe5348099124cd533.jpg",
-    "static/media/project1.jpg": "/static/media/project1.b7714ae36403bddc44ab.jpg",
-    "static/media/project2_2.jpg": "/static/media/project2_2.4e1ba0e1141429e9708a.jpg",
     "static/media/psyduck2.jpg": "/static/media/psyduck2.4c9a66c4521c3d28b5de.jpg",
     "static/media/profile.jpg": "/static/media/profile.5f3b8e69153598f8dd2a.jpg",
-    "static/media/project2_0.jpg": "/static/media/project2_0.746a8e450f76d666c728.jpg",
     "static/media/eva.jpg": "/static/media/eva.258d5c64c8708a5ce23b.jpg",
     "static/media/FIN_BERT.png": "/static/media/FIN_BERT.dcca410953d659f4c67b.png",
     "static/media/Auto_Trading.png": "/static/media/Auto_Trading.58672b10e4e75229a9f0.png",
     "static/media/ryan.jpg": "/static/media/ryan.ca24473bc1e6d20bf0d1.jpg",
+    "static/media/psyduck1-rowsize.jpg": "/static/media/psyduck1-rowsize.5ca3c6f0e2f1fbac9e20.jpg",
     "static/media/patience_negative.png": "/static/media/patience_negative.f398eeac3f10fdda1c27.png",
     "static/media/finance_negative.png": "/static/media/finance_negative.7564b2a61986794fdd3e.png",
     "static/media/avatar.jpg": "/static/media/avatar.21d108f80102dc685d9b.jpg",
@@ -57,7 +54,7 @@
     "index.html": "/index.html"
   },
   "entrypoints": [
-    "static/css/main.3198fa80.css",
-    "static/js/main.fc0125bf.js"
+    "static/css/main.285d1a89.css",
+    "static/js/main.514f6d9a.js"
   ]
 }

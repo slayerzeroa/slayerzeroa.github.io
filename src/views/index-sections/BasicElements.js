@@ -3,9 +3,13 @@ import React from "react";
 import Switch from "react-bootstrap-switch";
 // plugin that creates slider
 import Slider from "nouislider";
-import project1 from "../../assets/img/project1.jpg";
-import project2_0 from "../../assets/img/psyduck1.jpg";
+import project2_0 from "../../assets/img/psyduck1-rowsize.jpg";
 import { colors, width, height } from "../../assets/config/globalStyles"; //width,height 받아오기
+import { FaGithub, FaLinkedin } from "react-icons/fa";
+import { SiNaver } from "react-icons/si";
+import { TbFileCv } from "react-icons/tb";
+
+import "./css/BasicElement.css";
 
 // reactstrap components
 import {
@@ -19,6 +23,10 @@ import {
   Container,
   Row,
   Col,
+  Card,
+  CardBody,
+  CardTitle,
+  CardText,
 } from "reactstrap";
 
 // core components
@@ -129,18 +137,75 @@ function BasicElements() {
           <Row>
             <Col md="20">
               <Button className="btn-neutral" color="default">
-                Make High Quality Service in the Financial Industry
+                Make High Quality Quant Service in the Korea
               </Button>
             </Col>
           </Row>
-          <h3>
+          <h3 className="title">
             <br></br>
             <br></br>About Me
           </h3>
-          <img
+          {/* <img
             src={project2_0}
             style={{ Width: width, display: "block", marginBottom: 10 }}
-          ></img>
+          ></img> */}
+          <Row>
+            <Col md="4">
+              <Card>
+                <img
+                  src={project2_0}
+                  alt="Project"
+                  className="card-img-top"
+                  style={{ width: "100%", height: "auto" }}
+                />
+                <CardBody>
+                  <CardTitle tag="h5">DAEMYEONG YOO</CardTitle>
+                  <CardText>
+                    Graduate of Ajou University <br></br>
+                    Financial Engineering Lab
+                  </CardText>
+                  <div className="icon-buttons">
+                    <Button
+                      color="primary"
+                      href="https://github.com/slayerzeroa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="icon-button"
+                    >
+                      <FaGithub />
+                    </Button>
+                    <Button
+                      color="info"
+                      href="https://www.linkedin.com/in/slayerzeroa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="icon-button"
+                    >
+                      <FaLinkedin />
+                    </Button>
+                    <Button
+                      color="success"
+                      href="https://blog.naver.com/slayerzeroa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="icon-button"
+                    >
+                      <SiNaver />
+                    </Button>
+                    <Button
+                      color="default"
+                      href="https://blog.naver.com/slayerzeroa"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="icon-button"
+                    >
+                      <TbFileCv />
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            </Col>
+          </Row>
         </Container>
       </div>
     </>

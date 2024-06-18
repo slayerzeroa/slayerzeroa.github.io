@@ -17,7 +17,7 @@ import {
   Container,
   UncontrolledTooltip,
 } from "reactstrap";
-import "./IndexNavbar.css"; // CSS 파일 임포트
+import "./css/IndexNavbar.css"; // CSS 파일 임포트
 
 function IndexNavbar() {
   const [navbarColor, setNavbarColor] = React.useState("navbar-transparent");
@@ -88,7 +88,7 @@ function IndexNavbar() {
           >
             <Nav navbar>
               <NavItem>
-                <NavLink to="/about" tag={Link}>
+                <NavLink to="/index" tag={Link}>
                   Home
                 </NavLink>
               </NavItem>

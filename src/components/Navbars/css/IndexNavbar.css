@@ -1,31 +1,31 @@
 @font-face {
   font-family: "PretendardVariable";
-  src: url("../../fonts/PretendardVariable.woff2") format("woff2");
+  src: url("../../../fonts/PretendardVariable.woff2") format("woff2");
 }
 
 @font-face {
   font-family: "MaruBuri-Bold";
-  src: url("../../fonts/MaruBuri-Bold.otf") format("opentype");
+  src: url("../../../fonts/MaruBuri-Bold.otf") format("opentype");
 }
 
 @font-face {
   font-family: "MaruBuri-ExtraLight";
-  src: url("../../fonts/MaruBuri-ExtraLight.otf") format("opentype");
+  src: url("../../../fonts/MaruBuri-ExtraLight.otf") format("opentype");
 }
 
 @font-face {
   font-family: "MaruBuri-Light";
-  src: url("../../fonts/MaruBuri-Light.otf") format("opentype");
+  src: url("../../../fonts/MaruBuri-Light.otf") format("opentype");
 }
 
 @font-face {
   font-family: "MaruBuri-Regular";
-  src: url("../../fonts/MaruBuri-Regular.otf") format("opentype");
+  src: url("../../../fonts/MaruBuri-Regular.otf") format("opentype");
 }
 
 @font-face {
   font-family: "MaruBuri-SemiBold";
-  src: url("../../fonts/MaruBuri-SemiBold.otf") format("opentype");
+  src: url("../../../fonts/MaruBuri-SemiBold.otf") format("opentype");
 }
 
 body {
