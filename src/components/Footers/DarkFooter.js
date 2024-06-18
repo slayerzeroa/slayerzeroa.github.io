@@ -17,11 +17,11 @@ function DarkFooter() {
             </li>
             <li>
               <a href="https://blog.naver.com/slayerzeroa" target="_blank">
-                Blog
+                Naver Blog
               </a>
             </li>
             <li>
-              <a href="https://fepsi.netlify.app/index" target="_blank">
+              <a href="https://slayerzeroa.github.io/contact" target="_blank">
                 Contact Us : slayerzeroa@naver.com
               </a>
             </li>
