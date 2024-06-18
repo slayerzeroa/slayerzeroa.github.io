@@ -1,6 +1,7 @@
 {
-  "name": "now-ui-kit-react",
+  "name": "slayerzeroa.github.io",
   "version": "1.5.1",
+  "homepage": "https://slayerzeroa.github.io",
   "private": true,
   "dependencies": {
     "gulp": "4.0.2",
@@ -25,6 +26,8 @@
     "styled-components": "^5.3.6"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build && gulp licenses",
     "test": "react-scripts test",
@@ -32,6 +35,9 @@
     "install:clean": "rm -rf node_modules/ && rm -rf package-lock.json && npm install && npm start",
     "compile-sass": "sass src/assets/scss/now-ui-kit.scss src/assets/css/now-ui-kit.css",
     "minify-sass": "sass src/assets/scss/now-ui-kit.scss src/assets/css/now-ui-kit.min.css --style compressed"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.1.1"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -55,6 +61,5 @@
   "optionalDependencies": {
     "@babel/core": "7.18.9",
     "typescript": "4.7.4"
-  },
-  "homepage": "http://fepsi.com/"
+  }
 }
