@@ -21,9 +21,7 @@ function DarkFooter() {
               </a>
             </li>
             <li>
-              <a href="https://slayerzeroa.github.io/contact" target="_blank">
-                Contact Us : slayerzeroa@naver.com
-              </a>
+              <a target="_blank">Contact Us : slayerzeroa@naver.com</a>
             </li>
           </ul>
         </nav>

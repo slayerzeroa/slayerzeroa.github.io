@@ -39,9 +39,15 @@ function Typography() {
                 </h5>
               </div>
               <div className="history-line">
-                <span>고등학생</span>
+                <span>2018</span>
                 <h5>
-                  인천광역시교육청 수학탐구발표대회 은상, 동상<br></br>
+                  인천광역시교육청 수학탐구발표대회 은상<br></br>
+                </h5>
+              </div>
+              <div className="history-line">
+                <span>2018</span>
+                <h5>
+                  인천광역시교육청 수학탐구발표대회 동상<br></br>
                 </h5>
               </div>
               <div className="history-line">
