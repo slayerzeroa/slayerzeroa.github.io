@@ -1,11 +1,16 @@
 {
   "files": {
-    "main.css": "/static/css/main.a8d568a9.css",
-    "main.js": "/static/js/main.b9382db2.js",
+    "main.css": "/static/css/main.3198fa80.css",
+    "main.js": "/static/js/main.fc0125bf.js",
     "static/media/Tunnel.mp4": "/static/media/Tunnel.81bf6a0b9364edecb5b2.mp4",
-    "static/media/header_0.png": "/static/media/header_0.8b3de81425da9ba0bf1b.png",
+    "static/media/PretendardVariable.woff2": "/static/media/PretendardVariable.2bc582461caf4e05b51d.woff2",
     "static/media/FE_background.png": "/static/media/FE_background.4dc7af911efbc4a74c04.png",
+    "static/media/MaruBuri-SemiBold.otf": "/static/media/MaruBuri-SemiBold.2f6258053ed5a760fedc.otf",
+    "static/media/MaruBuri-Light.otf": "/static/media/MaruBuri-Light.ec0a5545e3a27e6deeb5.otf",
+    "static/media/MaruBuri-Bold.otf": "/static/media/MaruBuri-Bold.063fdc0633823c7eb7c0.otf",
     "static/media/skyscrapers.jpg": "/static/media/skyscrapers.b3ffecc745736b504bdd.jpg",
+    "static/media/MaruBuri-Regular.otf": "/static/media/MaruBuri-Regular.87f7d3edaabb71d870ee.otf",
+    "static/media/MaruBuri-ExtraLight.otf": "/static/media/MaruBuri-ExtraLight.bdaba8942bb22ee2d4a8.otf",
     "static/media/projects_background.jpg": "/static/media/projects_background.6783a475dc78a4c3c730.jpg",
     "static/media/YDM.gif": "/static/media/YDM.396b40dda9e52a413fc9.gif",
     "static/media/bg6.jpg": "/static/media/bg6.dc603b7416966b84ac68.jpg",
@@ -24,6 +29,7 @@
     "static/media/project2_1.jpg": "/static/media/project2_1.ceabe5348099124cd533.jpg",
     "static/media/project1.jpg": "/static/media/project1.b7714ae36403bddc44ab.jpg",
     "static/media/project2_2.jpg": "/static/media/project2_2.4e1ba0e1141429e9708a.jpg",
+    "static/media/psyduck2.jpg": "/static/media/psyduck2.4c9a66c4521c3d28b5de.jpg",
     "static/media/profile.jpg": "/static/media/profile.5f3b8e69153598f8dd2a.jpg",
     "static/media/project2_0.jpg": "/static/media/project2_0.746a8e450f76d666c728.jpg",
     "static/media/eva.jpg": "/static/media/eva.258d5c64c8708a5ce23b.jpg",
@@ -51,7 +57,7 @@
     "index.html": "/index.html"
   },
   "entrypoints": [
-    "static/css/main.a8d568a9.css",
-    "static/js/main.b9382db2.js"
+    "static/css/main.3198fa80.css",
+    "static/js/main.fc0125bf.js"
   ]
 }
