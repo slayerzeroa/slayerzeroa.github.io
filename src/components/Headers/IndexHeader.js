@@ -36,10 +36,20 @@ function IndexHeader() {
           }}
           ref={pageHeader}
         ></div>
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          }}
+        ></div>
         <Container>
           <div className="content-center brand" style={styles.header}>
             <p className="title">
-              Programming the World,<br></br>Programming with FEPSI
+              Not only Quantitative Developer, But also Qualitative Developer.
             </p>
           </div>
           <h6 className="category category-absolute">
