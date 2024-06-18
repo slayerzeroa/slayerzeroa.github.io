@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.8b8238c0.css",
-    "main.js": "/static/js/main.59d8040c.js",
+    "main.css": "/static/css/main.a8d568a9.css",
+    "main.js": "/static/js/main.b9382db2.js",
     "static/media/Tunnel.mp4": "/static/media/Tunnel.81bf6a0b9364edecb5b2.mp4",
     "static/media/header_0.png": "/static/media/header_0.8b3de81425da9ba0bf1b.png",
     "static/media/FE_background.png": "/static/media/FE_background.4dc7af911efbc4a74c04.png",
@@ -47,11 +47,11 @@
     "static/media/nucleo-outline.woff2": "/static/media/nucleo-outline.802141dd0dcc63b21cbb.woff2",
     "static/media/KKM.png": "/static/media/KKM.63f11474e9fe914ee83c.png",
     "static/media/linkedin.png": "/static/media/linkedin.703626263087e3e7c315.png",
-    "static/media/tistory.svg": "/static/media/tistory.49abfc3904e8357b52a09ffff898f01c.svg",
+    "static/media/tistory.svg": "/static/media/tistory.159939e40df74461d13525ad835b9ef3.svg",
     "index.html": "/index.html"
   },
   "entrypoints": [
-    "static/css/main.8b8238c0.css",
-    "static/js/main.59d8040c.js"
+    "static/css/main.a8d568a9.css",
+    "static/js/main.b9382db2.js"
   ]
 }
