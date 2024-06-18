@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Tooltip } from 'react-tooltip';
+import { Tooltip } from "react-tooltip";
 // reactstrap components
 import {
   Button,
@@ -17,6 +17,7 @@ import {
   Container,
   UncontrolledTooltip,
 } from "reactstrap";
+import "./IndexNavbar.css"; // CSS 파일 임포트
 
 function IndexNavbar() {
   const [navbarColor, setNavbarColor] = React.useState("navbar-transparent");
@@ -58,12 +59,13 @@ function IndexNavbar() {
               to="/index"
               tag={Link}
               id="navbar-brand"
-              style={{fontSize:"250%"}}
+              style={{ fontSize: "200%", fontFamily: "PretendardVariable" }}
             >
-              FEPSI
+              주식은 골아파덕
             </NavLink>
+
             <UncontrolledTooltip target="#navbar-brand">
-              Not a coke. It's FEPSI.
+              Not 고라파덕. It's 골아파덕.
             </UncontrolledTooltip>
             <button
               className="navbar-toggler navbar-toggler"
@@ -87,7 +89,7 @@ function IndexNavbar() {
             <Nav navbar>
               <NavItem>
                 <NavLink to="/about" tag={Link}>
-                  About FEPSI
+                  Home
                 </NavLink>
               </NavItem>
               <NavItem>
@@ -100,28 +102,43 @@ function IndexNavbar() {
                   Projects
                 </NavLink>
               </NavItem>
-              
-              <NavItem data-tooltip-content="개발중입니다.. 뚠뚠.." id="activities">
-              <Tooltip anchorId="activities" place="top" style={{fontSize:"50%"}}/>
+
+              <NavItem
+                data-tooltip-content="개발중입니다.. 뚠뚠.."
+                id="activities"
+              >
+                <Tooltip
+                  anchorId="activities"
+                  place="top"
+                  style={{ fontSize: "50%" }}
+                />
                 {/* <NavLink to="/activities" tag={Link}> */}
-                <NavLink>
-                  Activities
-                </NavLink>
+                <NavLink>Activities</NavLink>
               </NavItem>
-              <NavItem data-tooltip-content="개발중입니다.. 뚠뚠.." id="members">
-              <Tooltip anchorId="members" place="top" style={{fontSize:"50%"}}/>
+              <NavItem
+                data-tooltip-content="개발중입니다.. 뚠뚠.."
+                id="members"
+              >
+                <Tooltip
+                  anchorId="members"
+                  place="top"
+                  style={{ fontSize: "50%" }}
+                />
                 {/* <NavLink to="/members" tag={Link}> */}
-                <NavLink>
-                  Members
-                </NavLink>
+                <NavLink>Members</NavLink>
               </NavItem>
 
-              <NavItem data-tooltip-content="개발중입니다.. 뚠뚠.." id="contact">
-              <Tooltip anchorId="contact" place="top" style={{fontSize:"50%"}} />
+              <NavItem
+                data-tooltip-content="개발중입니다.. 뚠뚠.."
+                id="contact"
+              >
+                <Tooltip
+                  anchorId="contact"
+                  place="top"
+                  style={{ fontSize: "50%" }}
+                />
                 {/* <NavLink to="/contact" tag={Link}> */}
-                <NavLink>
-                  Contact & Support
-                </NavLink>
+                <NavLink>Contact & Support</NavLink>
               </NavItem>
             </Nav>
           </Collapse>

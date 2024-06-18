@@ -5,8 +5,8 @@ import React from "react";
 import { Container } from "reactstrap";
 
 // core components
-import {StyleSheet, View, TouchableOpacity, Text} from 'react-native';
-import {colors, width, height} from '../../assets/config/globalStyles'; //width,height 받아오기
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { colors, width, height } from "../../assets/config/globalStyles"; //width,height 받아오기
 
 function IndexHeader() {
   let pageHeader = React.createRef();
@@ -31,18 +31,19 @@ function IndexHeader() {
         <div
           className="page-header-image"
           style={{
-            backgroundImage: "url(" + require("assets/img/header_0.png") + ")"
+            backgroundImage: "url(" + require("assets/img/psyduck2.jpg") + ")",
+            size: "cover",
           }}
           ref={pageHeader}
         ></div>
         <Container>
           <div className="content-center brand" style={styles.header}>
-            <p className="title">Programming the World,<br></br>Programming with FEPSI</p>
+            <p className="title">
+              Programming the World,<br></br>Programming with FEPSI
+            </p>
           </div>
           <h6 className="category category-absolute">
-            Designed by{" YDM"}
-            . Coded by{" YDM"}
-            .
+            Designed by{" YDM"}. Coded by{" YDM"}.
           </h6>
         </Container>
       </div>
@@ -52,9 +53,8 @@ function IndexHeader() {
 
 export default IndexHeader;
 
-
 const styles = StyleSheet.create({
   header: {
-    fontSize: width * 11
+    fontSize: width * 11,
   },
 });
