@@ -10,7 +10,7 @@ import IndexHeader from "components/Headers/IndexHeader.js";
 import DarkFooter from "components/Footers/DarkFooter.js";
 
 // sections for this page
-import BasicElements from "./index-sections/BasicElements.js";
+import Aboutme from "./index-sections/Aboutme.js";
 import Navbars from "./index-sections/Navbars.js";
 import Tabs from "./index-sections/Tabs.js";
 import Pagination from "./index-sections/Pagination.js";
@@ -44,7 +44,7 @@ function Index() {
       <div className="wrapper">
         <IndexHeader />
         <div className="main">
-          <BasicElements />
+          <Aboutme />
           <Typography />
           {/* <Recruit /> */}
           <SimpleContact />
