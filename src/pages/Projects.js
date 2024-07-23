@@ -24,6 +24,7 @@ import SignUp from "views/projects-sections/SignUp.js";
 import Examples from "views/projects-sections/Examples.js";
 import Download from "views/projects-sections/Download.js";
 import Recruit from "views/projects-sections/recruit.js";
+import Board from "views/projects-sections/Board.js";
 
 function Projects() {
   React.useEffect(() => {
@@ -43,13 +44,14 @@ function Projects() {
       <div className="wrapper">
         <Projects_Header />
         <div className="main">
-          {/* <BasicElements /> */}
-          {/* <Typography /> */}
-          {/* <Recruit /> */}
-          {/* <Navbars /> */}
-          {/* <Tabs />
-          <Pagination />
-          <Notifications />
+          {/* <BasicElements />
+          <Typography />
+          <Recruit />
+          <Navbars /> */}
+          <Board />
+          {/* <Tabs /> */}
+          {/* <Pagination /> */}
+          {/* <Notifications />
           <Javascript /> */}
           <Carousel />
           {/* <NucleoIcons />

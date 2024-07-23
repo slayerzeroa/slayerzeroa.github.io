@@ -61,7 +61,7 @@ function Aboutme() {
 
   const handleDownload = () => {
     const link = document.createElement("a");
-    link.href = "src/assets/contents/ydm_resume.pdf"; // CV 파일이 위치한 URL
+    link.href = "/contents/ydm_resume.pdf"; // CV 파일이 위치한 URL
     link.download = "ydm_resume.pdf"; // 다운로드할 때 저장될 파일 이름
     document.body.appendChild(link);
     link.click();
