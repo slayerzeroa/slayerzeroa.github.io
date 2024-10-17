@@ -14,27 +14,13 @@ function DefaultFooter() {
           <nav>
             <ul>
               <li>
-                <a
-                  href="https://fepsi.netlify.app/index"
-                  target="_blank"
-                >
-                  FEPSI
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://blog.naver.com/slayerzeroa"
-                  target="_blank"
-                >
+                <a href="https://blog.naver.com/slayerzeroa" target="_blank">
                   Blog
                 </a>
               </li>
               <li>
-                <a
-                  href="https://fepsi.netlify.app/index"
-                  target="_blank"
-                >
-                  Contact Us : slayerzeroa@naver.com
+                <a href="https://blog.naver.com/slayerzeroa" target="_blank">
+                  Contact: slayerzeroa@naver.com
                 </a>
               </li>
             </ul>

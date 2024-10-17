@@ -36,7 +36,7 @@ function Projects() {
     return function cleanup() {
       document.body.classList.remove("index-page");
       document.body.classList.remove("sidebar-collapse");
-    };
+    }; 
   });
   return (
     <>

@@ -37,23 +37,28 @@ import FE from "pages/FE";
 import Contact from "pages/Contact";
 import Activities from "pages/Activities";
 
+// import BoardDetail from "views/projects-sections/components/BoardDetail.js";
+import BoardPages from "pages/BoardPages";
+import Board from "views/projects-sections/Board";
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
   <BrowserRouter>
     <Routes>
-        <Route path="/activities" element={ <Activities/> } />
-        <Route path="/contact" element={ <Contact/> } />
-        <Route path="/fe" element={ <FE/> } />
-        <Route path="/members" element={ <Members/> } />
-        <Route path="/projects" element={ <Projects/> } />
-        <Route path="/index" element={ <Index/> } />
-        <Route path="/about" element={ <About/> } />
-        <Route path="/nucleo-icons" element={ <NucleoIcons/>}/>
-        <Route path="/landing-page" element={ <LandingPage/>}/>
-        <Route path="/profile-page" element={ <ProfilePage/>}/>
-        <Route path="/login-page" element={ <LoginPage/>}/>
-        <Route path="/" element={<Navigate to="/index"/>} />
+      <Route path="/activities" element={<Activities />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/fe" element={<FE />} />
+      <Route path="/members" element={<Members />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/index" element={<Index />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/nucleo-icons" element={<NucleoIcons />} />
+      <Route path="/landing-page" element={<LandingPage />} />
+      <Route path="/profile-page" element={<ProfilePage />} />
+      <Route path="/login-page" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to="/index" />} />
+      <Route path="/projects/:id" element={<BoardPages />} />
     </Routes>
   </BrowserRouter>
 );
