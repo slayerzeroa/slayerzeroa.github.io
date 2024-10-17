@@ -17,11 +17,16 @@ function DarkFooter() {
             </li>
             <li>
               <a href="https://blog.naver.com/slayerzeroa" target="_blank">
-                Naver Blog
+                BLOG
               </a>
             </li>
             <li>
-              <a target="_blank">Contact Us : slayerzeroa@naver.com</a>
+              <a target="_blank">Contact ME: slayerzeroa@naver.com</a>
+            </li>
+            <li>
+              <a href="https://github.com/slayerzeroa" target="_blank">
+                GITHUB
+              </a>
             </li>
           </ul>
         </nav>
