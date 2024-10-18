@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "firebase": "^10.12.4",
+    "front-matter": "^4.0.2",
     "gulp-append-prepend": "1.0.9",
     "moment": "2.29.4",
     "namor": "^3.0.1",
