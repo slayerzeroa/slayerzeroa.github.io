@@ -29,8 +29,8 @@
     "styled-components": "^5.3.6"
   },
   "scripts": {
-    "predeploy": "npm run build && echo > build/.nojekyll",
-    "deploy": "gh-pages -d build",
+  "predeploy": "npm run build && node -e \"require('fs').writeFileSync('./build/.nojekyll', '')\"",
+  "deploy": "gh-pages -d build --dotfiles",
     "start": "react-scripts start",
     "build": "react-scripts build && gulp licenses",
     "test": "react-scripts test",
@@ -40,8 +40,9 @@
     "minify-sass": "sass src/assets/scss/now-ui-kit.scss src/assets/css/now-ui-kit.min.css --style compressed"
   },
   "devDependencies": {
-    "gh-pages": "^6.1.1",
-    "gulp": "^5.0.0"
+    "gh-pages": "^6.2.0",
+    "gulp": "^5.0.0",
+    "touch-cli": "^0.0.1"
   },
   "eslintConfig": {
     "extends": "react-app"

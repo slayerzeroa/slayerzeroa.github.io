@@ -8,7 +8,7 @@ const BoardList = ({ number, category, title, date }) => {
   // 카테고리별 색상 정의
   const categoryColors = {
     ML: "bg-primary", // Machine Learning
-    finance: "bg-success", // Finance
+    Finance: "bg-success", // Finance
     AI: "bg-info", // AI
     default: "bg-default", // 기본 색상
   };
