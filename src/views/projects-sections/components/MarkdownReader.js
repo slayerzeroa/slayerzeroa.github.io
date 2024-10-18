@@ -47,9 +47,14 @@ const MarkdownReader = ({ postId }) => {
   return (
     <div style={{ padding: "20px", backgroundColor: "#f9f9f9" }}>
       {/* 메타데이터 출력 */}
-      <h1>{metaData.title}</h1>
-      <p>{metaData.date}</p>
-      <p>{metaData.category}</p>
+      <h1>
+        <strong>{metaData.title}</strong>
+      </h1>
+      <p>
+        {metaData.category} {metaData.date}
+      </p>
+      <br></br>
+      <br></br>
 
       {/* Markdown 본문 출력 */}
       <ReactMarkdown>{content}</ReactMarkdown>
