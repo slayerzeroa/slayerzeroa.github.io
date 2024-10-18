@@ -25,6 +25,7 @@ import Examples from "views/projects-sections/Examples.js";
 import Download from "views/projects-sections/Download.js";
 import Recruit from "views/projects-sections/recruit.js";
 import Board from "views/projects-sections/Board.js";
+import BoardFooter from "views/projects-sections/components/BoardFooter";
 
 function Projects() {
   React.useEffect(() => {
@@ -36,7 +37,7 @@ function Projects() {
     return function cleanup() {
       document.body.classList.remove("index-page");
       document.body.classList.remove("sidebar-collapse");
-    }; 
+    };
   });
   return (
     <>
@@ -53,6 +54,7 @@ function Projects() {
           {/* <Pagination /> */}
           {/* <Notifications />
           <Javascript /> */}
+          <BoardFooter />
           <Carousel />
           {/* <NucleoIcons />
           <CompleteExamples />

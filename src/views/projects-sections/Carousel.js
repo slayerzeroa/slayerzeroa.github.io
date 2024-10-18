@@ -131,14 +131,14 @@ function CarouselSection() {
               </Carousel>
             </Col>
           </Row>
-          <Row className="justify-content-center">
+          {/* <Row className="justify-content-center">
             <Col lg="10" md="12">
               <h4>
                 <br></br>
                 이것저것 합니다.
               </h4>
             </Col>
-          </Row>
+          </Row> */}
         </Container>
       </div>
     </>
