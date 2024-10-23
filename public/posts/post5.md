@@ -1,6 +1,6 @@
 ---
 title: "어디서 들은 이야기 4"
-category: "Finance"
+category: "Study"
 date: "2024-10-18"
 ---
 

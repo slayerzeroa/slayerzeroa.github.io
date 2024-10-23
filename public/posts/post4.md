@@ -1,6 +1,6 @@
 ---
 title: "어디서 들은 이야기 3"
-category: "AI"
+category: "Journal"
 date: "2024-10-18"
 ---
 

@@ -7,10 +7,14 @@ const BoardList = ({ number, category, title, date }) => {
 
   // 카테고리별 색상 정의
   const categoryColors = {
-    ML: "bg-primary", // Machine Learning
-    Finance: "bg-success", // Finance
-    AI: "bg-info", // AI
-    default: "bg-default", // 기본 색상
+    ML: "bg-primary", // 오렌지색
+    Quant: "bg-success", // 초록색
+    Programming: "bg-info", // 하늘색
+    Journal: "bg-warning", // 노란색
+    Review: "bg-danger", // 빨간색
+    Study: "bg-secondary", // 회색
+    DataScience: "bg-default", // 보라색 (새로운 카테고리)
+    ETC: "bg-dark", // 검정색
   };
 
   // 카테고리에 따른 색상 설정 (없는 경우 기본 색상 사용)
