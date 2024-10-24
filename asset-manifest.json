@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.58f89a4d.css",
-    "main.js": "/static/js/main.df5c3fe5.js",
+    "main.js": "/static/js/main.4723bd53.js",
     "static/media/Tunnel.mp4": "/static/media/Tunnel.81bf6a0b9364edecb5b2.mp4",
     "static/media/PretendardVariable.woff2": "/static/media/PretendardVariable.2bc582461caf4e05b51d.woff2",
     "static/media/FE_background.png": "/static/media/FE_background.4dc7af911efbc4a74c04.png",
@@ -15,11 +15,9 @@
     "static/media/YDM.gif": "/static/media/YDM.396b40dda9e52a413fc9.gif",
     "static/media/bg6.jpg": "/static/media/bg6.dc603b7416966b84ac68.jpg",
     "static/media/bg1.jpg": "/static/media/bg1.71a28027225b8ae945bb.jpg",
-    "static/media/linka.png": "/static/media/linka.c21a3597d8e4587b0d71.png",
     "static/media/bg11.jpg": "/static/media/bg11.c6c21bd88aee67067eb6.jpg",
     "static/media/bg4.jpg": "/static/media/bg4.01ad1068585185f35555.jpg",
     "static/media/with_us.jpg": "/static/media/with_us.a4d2c59ab78bde0fbdfd.jpg",
-    "static/media/FIL.png": "/static/media/FIL.dc348ebbe9a3ecf952ab.png",
     "static/media/bg3.jpg": "/static/media/bg3.850b808854f295b2c596.jpg",
     "static/media/login.jpg": "/static/media/login.ab931d77bfe905914456.jpg",
     "static/media/bg7.jpg": "/static/media/bg7.6249276d677cd6fd680e.jpg",
@@ -29,8 +27,6 @@
     "static/media/psyduck2.jpg": "/static/media/psyduck2.4c9a66c4521c3d28b5de.jpg",
     "static/media/profile.jpg": "/static/media/profile.5f3b8e69153598f8dd2a.jpg",
     "static/media/eva.jpg": "/static/media/eva.258d5c64c8708a5ce23b.jpg",
-    "static/media/FIN_BERT.png": "/static/media/FIN_BERT.dcca410953d659f4c67b.png",
-    "static/media/Auto_Trading.png": "/static/media/Auto_Trading.58672b10e4e75229a9f0.png",
     "static/media/ryan.jpg": "/static/media/ryan.ca24473bc1e6d20bf0d1.jpg",
     "static/media/psyduck1-rowsize.jpg": "/static/media/psyduck1-rowsize.5ca3c6f0e2f1fbac9e20.jpg",
     "static/media/patience_negative.png": "/static/media/patience_negative.f398eeac3f10fdda1c27.png",
@@ -56,10 +52,11 @@
     "static/media/post3.md": "/static/media/post3.e610a7e2192727987ede.md",
     "static/media/post1.md": "/static/media/post1.7e42c40708129073fbeb.md",
     "static/media/post4.md": "/static/media/post4.aa86c465ae3b01c210db.md",
-    "static/media/post5.md": "/static/media/post5.547a665686b8d0475a81.md"
+    "static/media/post5.md": "/static/media/post5.547a665686b8d0475a81.md",
+    "static/media/post6.md": "/static/media/post6.42f99e5a177aa857189f.md"
   },
   "entrypoints": [
     "static/css/main.58f89a4d.css",
-    "static/js/main.df5c3fe5.js"
+    "static/js/main.4723bd53.js"
   ]
 }
