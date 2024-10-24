@@ -36,3 +36,13 @@ https://slayerzeroa.github.io/
 
 <h1>Deploy Command</h1>
 npm run deploy -- -m "deploy message"
+
+글 카테고리
+ML: "bg-primary", // 오렌지색
+Quant: "bg-success", // 초록색
+Programming: "bg-info", // 하늘색
+Journal: "bg-warning", // 노란색
+Review: "bg-danger", // 빨간색
+Study: "bg-secondary", // 회색
+DataScience: "bg-default", // 보라색 (새로운 카테고리)
+ETC: "bg-dark", // 검정색

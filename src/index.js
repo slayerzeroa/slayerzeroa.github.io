@@ -1,20 +1,3 @@
-/*
-
-=========================================================
-* Now UI Kit React - v1.5.1
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/now-ui-kit-react
-* Copyright 2022 Creative Tim (http://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/now-ui-kit-react/blob/main/LICENSE.md)
-
-* Designed by www.invisionapp.com Coded by www.creative-tim.com
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
@@ -37,10 +20,6 @@ import FE from "pages/FE";
 import Contact from "pages/Contact";
 import Activities from "pages/Activities";
 
-// import BoardDetail from "views/projects-sections/components/BoardDetail.js";
-import BoardPages from "pages/BoardPages";
-import Board from "views/projects-sections/Board";
-
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
@@ -58,7 +37,7 @@ root.render(
       <Route path="/profile-page" element={<ProfilePage />} />
       <Route path="/login-page" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/index" />} />
-      <Route path="/projects/:id" element={<BoardPages />} />
+      <Route path="/projects/:id" element={<Projects />} />
     </Routes>
   </BrowserRouter>
 );

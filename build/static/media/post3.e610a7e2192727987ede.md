@@ -1,6 +1,6 @@
 ---
 title: "어디서 들은 이야기 2"
-category: "AI"
+category: "Programming"
 date: "2024-10-18"
 ---
 

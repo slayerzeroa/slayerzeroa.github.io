@@ -4,10 +4,10 @@ import React from "react";
 // reactstrap components
 import { Container } from "reactstrap";
 // core components
-import {StyleSheet, View, TouchableOpacity, Text} from 'react-native';
-import {colors, width, height} from '../../assets/config/globalStyles'; //width,height 받아오기
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { colors, width, height } from "../../assets/config/globalStyles"; //width,height 받아오기
 
-function FE_Header() {
+function FeHeader() {
   let pageHeader = React.createRef();
 
   React.useEffect(() => {
@@ -30,17 +30,21 @@ function FE_Header() {
         <div
           className="page-header-image"
           style={{
-            backgroundImage: "url(" + require("assets/img/FE_background.png") + ")", width:"100%", alignself:'center'}}
+            backgroundImage:
+              "url(" + require("assets/img/FE_background.png") + ")",
+            width: "100%",
+            alignself: "center",
+          }}
           ref={pageHeader}
         ></div>
         <Container>
           <div className="content-center brand" style={styles.header}>
-            <p className="title" >Financial Engineering is,<br></br>Adventure into the Money</p>
+            <p className="title">
+              Financial Engineering is,<br></br>Adventure into the Money
+            </p>
           </div>
           <h6 className="category category-absolute">
-            Designed by{" YDM"}
-            . Coded by{" YDM"}
-            .
+            Designed by{" YDM"}. Coded by{" YDM"}.
           </h6>
         </Container>
       </div>
@@ -48,10 +52,10 @@ function FE_Header() {
   );
 }
 
-export default FE_Header;
+export default FeHeader;
 
 const styles = StyleSheet.create({
   header: {
-    fontSize: width * 11
+    fontSize: width * 11,
   },
 });

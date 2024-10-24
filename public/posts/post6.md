@@ -1,5 +1,5 @@
 ---
-title: "어디서 들은 이야기 4"
+title: "어디서 들은 이야기 5"
 category: "Study"
 date: "2024-10-18"
 ---

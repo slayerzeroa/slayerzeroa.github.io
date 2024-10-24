@@ -4,10 +4,10 @@ import React from "react";
 // reactstrap components
 import { Container } from "reactstrap";
 // core components
-import {StyleSheet, View, TouchableOpacity, Text} from 'react-native';
-import {colors, width, height} from '../../assets/config/globalStyles'; //width,height 받아오기
+import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { colors, width, height } from "../../assets/config/globalStyles"; //width,height 받아오기
 
-function Projects_Header() {
+function ProjectsHeader() {
   let pageHeader = React.createRef();
 
   React.useEffect(() => {
@@ -34,12 +34,12 @@ function Projects_Header() {
         ></div>
         <Container>
           <div className="content-center brand" style={styles.header}>
-            <p className="title" >Projects make Growth<br></br>No individual is bigger than the team</p>
+            <p className="title">
+              Projects make Growth<br></br>No individual is bigger than the team
+            </p>
           </div>
           <h6 className="category category-absolute">
-            Designed by{" YDM"}
-            . Coded by{" YDM"}
-            .
+            Designed by{" YDM"}. Coded by{" YDM"}.
           </h6>
         </Container>
       </div>
@@ -47,16 +47,17 @@ function Projects_Header() {
   );
 }
 
-export default Projects_Header;
+export default ProjectsHeader;
 
 const styles = StyleSheet.create({
   header: {
-    fontSize: width * 12
+    fontSize: width * 12,
   },
   background: {
-    backgroundImage: "url(" + require("assets/img/projects_background.jpg") + ")",
-    width:"100%",
-    alignself:'center',
+    backgroundImage:
+      "url(" + require("assets/img/projects_background.jpg") + ")",
+    width: "100%",
+    alignself: "center",
     opacity: 1,
-  }
+  },
 });

@@ -6,7 +6,7 @@ import React from "react";
 
 // core components
 import IndexNavbar from "components/Navbars/IndexNavbar.js";
-import FE_Header from "components/Headers/FE_Header.js";
+import FeHeader from "components/Headers/FeHeader.js";
 import DarkFooter from "components/Footers/DarkFooter.js";
 
 // sections for this page
@@ -41,7 +41,7 @@ function FE() {
     <>
       <IndexNavbar />
       <div className="wrapper">
-        <FE_Header />
+        <FeHeader />
         <div className="main">
           <BasicElements />
           {/* <Typography /> */}
