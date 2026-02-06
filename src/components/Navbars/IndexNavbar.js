@@ -92,17 +92,17 @@ function IndexNavbar() {
                   Home
                 </NavLink>
               </NavItem>
-              <NavItem>
+              {/* <NavItem>
                 <NavLink to="/fe" tag={Link}>
                   Financial Engineering
                 </NavLink>
-              </NavItem>
+              </NavItem> */}
               <NavItem>
                 <NavLink to="/projects" tag={Link}>
                   Projects
                 </NavLink>
               </NavItem>
-
+              {/* 
               <NavItem
                 data-tooltip-content="개발중입니다.. 뚠뚠.."
                 id="activities"
@@ -112,7 +112,7 @@ function IndexNavbar() {
                   place="top"
                   style={{ fontSize: "50%" }}
                 />
-                {/* <NavLink to="/activities" tag={Link}> */}
+                <NavLink to="/activities" tag={Link}>
                 <NavLink>Activities</NavLink>
               </NavItem>
               <NavItem
@@ -124,7 +124,7 @@ function IndexNavbar() {
                   place="top"
                   style={{ fontSize: "50%" }}
                 />
-                {/* <NavLink to="/members" tag={Link}> */}
+                <NavLink to="/members" tag={Link}>
                 <NavLink>Members</NavLink>
               </NavItem>
 
@@ -137,9 +137,9 @@ function IndexNavbar() {
                   place="top"
                   style={{ fontSize: "50%" }}
                 />
-                {/* <NavLink to="/contact" tag={Link}> */}
+                <NavLink to="/contact" tag={Link}>
                 <NavLink>Contact & Support</NavLink>
-              </NavItem>
+              </NavItem> */}
             </Nav>
           </Collapse>
         </Container>
