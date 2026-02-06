@@ -23,6 +23,7 @@ import Board from "views/projects-sections/Board.js";
 import BoardDetail from "views/projects-sections/components/BoardDetail";
 import BoardFooter from "views/projects-sections/components/BoardFooter";
 import Executive from "views/projects-sections/components/Executive";
+import Charts from "views/projects-sections/Charts";
 
 function Projects() {
   const [firstFocus, setFirstFocus] = React.useState(false);
@@ -45,9 +46,11 @@ function Projects() {
         <ProjectsHeader />
         <div className="main">
           {/* <div className="section section-about-us"> */}
-          <BoardDetail />
+          {/* <BoardDetail />
           <BoardFooter />
-          <Board />
+          <Board /> */}
+
+          <Charts />
           {/* </div> */}
           <Executive />
         </div>

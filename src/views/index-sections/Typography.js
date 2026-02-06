@@ -50,10 +50,10 @@ function Typography() {
                   인천광역시교육청 수학탐구발표대회 동상<br></br>
                 </h5>
               </div>
-              <div className="history-line">
+              {/* <div className="history-line">
                 <span>2001</span>
                 <h5>응애</h5>
-              </div>
+              </div> */}
             </Col>
           </Row>
         </div>

@@ -88,7 +88,7 @@ function Aboutme() {
               <Button color="warning" type="button">
                 Data Analysis
               </Button>
-              <Button color="success" type="button">
+              {/* <Button color="success" type="button">
                 Financial RL
               </Button>
               <Button color="info" type="button">
@@ -96,19 +96,19 @@ function Aboutme() {
               </Button>
               <Button color="default" type="button">
                 Simple Level Front, Back, DB
-              </Button>
+              </Button> */}
             </Col>
           </Row>
           <p className="category">Using Language</p>
           <Row>
             <Col md="10">
-              <Button color="primary" type="button">
+              <Button color="info" type="button">
                 Python
               </Button>
               <Button color="primary" type="button">
                 C++
               </Button>
-              <Button color="primary" type="button">
+              {/* <Button color="primary" type="button">
                 Rust
               </Button>
               <Button color="warning" type="button">
@@ -119,13 +119,13 @@ function Aboutme() {
               </Button>
               <Button color="info" type="button">
                 Solidity
-              </Button>
+              </Button> */}
             </Col>
           </Row>
           <p className="category">Using FrameWork</p>
           <Row>
             <Col md="10">
-              <Button color="success" type="button">
+              {/* <Button color="success" type="button">
                 Pytorch
               </Button>
               <Button color="warning" type="button">
@@ -136,7 +136,7 @@ function Aboutme() {
               </Button>
               <Button color="default" type="button">
                 Express.js
-              </Button>
+              </Button> */}
               <Button color="default" type="button">
                 Docker
               </Button>
@@ -146,7 +146,7 @@ function Aboutme() {
           <Row>
             <Col md="20">
               <Button className="btn-neutral" color="default">
-                Make High Quality Quant Service in the Korea
+                Make High Quality Quant Service
               </Button>
             </Col>
           </Row>

@@ -34,13 +34,9 @@ function ProjectsHeader() {
         ></div>
         <Container>
           <div className="content-center brand" style={styles.header}>
-            <p className="title">
-              Projects make Growth<br></br>No individual is bigger than the team
-            </p>
+            <p className="title">My Projects</p>
           </div>
-          <h6 className="category category-absolute">
-            Designed by{" YDM"}. Coded by{" YDM"}.
-          </h6>
+          <h6 className="category category-absolute">Coded by{" YDM"}.</h6>
         </Container>
       </div>
     </>

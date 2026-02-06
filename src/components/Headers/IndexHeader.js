@@ -52,9 +52,7 @@ function IndexHeader() {
               Not only Quantitative Developer, But also Qualitative Developer.
             </p>
           </div>
-          <h6 className="category category-absolute">
-            Designed by{" YDM"}. Coded by{" YDM"}.
-          </h6>
+          <h6 className="category category-absolute">Coded by{" YDM"}.</h6>
         </Container>
       </div>
     </>

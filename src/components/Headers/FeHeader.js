@@ -44,7 +44,7 @@ function FeHeader() {
             </p>
           </div>
           <h6 className="category category-absolute">
-            Designed by{" YDM"}. Coded by{" YDM"}.
+            Coded by{" YDM"}.
           </h6>
         </Container>
       </div>

@@ -89,7 +89,7 @@ function IndexNavbar() {
             <Nav navbar>
               <NavItem>
                 <NavLink to="/index" tag={Link}>
-                  Home
+                  About Me
                 </NavLink>
               </NavItem>
               {/* <NavItem>
