@@ -1,6 +1,0 @@
-/* BoardDetail.css */
-.markdown-container {
-  max-width: 1200px; /* 콘텐츠의 최대 너비를 설정하여 가독성 향상 */
-  margin: 0 auto; /* 좌우 마진을 자동으로 설정하여 중앙 정렬 */
-  padding: 25px; /* 내부 여백을 추가하여 콘텐츠가 가장자리에 붙지 않도록 함 */
-}
