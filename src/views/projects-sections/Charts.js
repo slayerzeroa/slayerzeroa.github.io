@@ -100,8 +100,8 @@ function Charts() {
 
     const fetchData = async () => {
       const [resKospi, resKosdaq] = await Promise.allSettled([
-        axios.get("http://slayerzeroa.iptime.org:8001/vkospi"),
-        axios.get("http://slayerzeroa.iptime.org:8001/vkosdaq"),
+        axios.get("https://slayerzeroa.click/vkospi"),
+        axios.get("https://slayerzeroa.click/vkosdaq"),
       ]);
 
       if (!mounted) return;
