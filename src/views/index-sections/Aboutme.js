@@ -83,7 +83,7 @@ function Aboutme() {
           <Row>
             <Col md="10">
               <Button color="primary" type="button">
-                Quantitative Trading / Research
+                Quantitative Trading
               </Button>
               <Button color="warning" type="button">
                 Data Analysis
@@ -137,6 +137,9 @@ function Aboutme() {
               <Button color="default" type="button">
                 Express.js
               </Button> */}
+              <Button color="warning" type="button">
+                SQL
+              </Button>
               <Button color="default" type="button">
                 Docker
               </Button>
