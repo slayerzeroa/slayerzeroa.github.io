@@ -503,8 +503,6 @@
 
 // export default Charts;
 
-
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -527,6 +525,9 @@ import {
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "https://slayerzeroa.click";
 const AUTH_CLIENT_KEY = process.env.REACT_APP_AUTH_CLIENT_KEY || "";
+
+// console.log("API_BASE_URL:", API_BASE_URL);
+// console.log("AUTH_CLIENT_KEY:", AUTH_CLIENT_KEY);
 
 // Access TTL이 10m 이므로 8분마다 갱신 시도
 const TOKEN_REFRESH_MS = 8 * 60 * 1000;
