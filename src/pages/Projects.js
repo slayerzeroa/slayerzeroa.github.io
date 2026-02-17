@@ -24,6 +24,7 @@ import BoardDetail from "views/projects-sections/components/BoardDetail";
 import BoardFooter from "views/projects-sections/components/BoardFooter";
 import Executive from "views/projects-sections/components/Executive";
 import Charts from "views/projects-sections/Charts";
+import InvestingHistoryDashboard from "views/projects-sections/InvestingHistoryDashboard";
 
 function Projects() {
   const [firstFocus, setFirstFocus] = React.useState(false);
@@ -51,6 +52,7 @@ function Projects() {
           <Board /> */}
 
           <Charts />
+          <InvestingHistoryDashboard />
           {/* </div> */}
           <Executive />
         </div>
