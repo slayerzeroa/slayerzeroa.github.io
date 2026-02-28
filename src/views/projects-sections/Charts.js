@@ -150,10 +150,12 @@ function Charts() {
   // KOSPI 라인 on/off
   const [showVKOSPI, setShowVKOSPI] = useState(true);
   const [showWVKOSPI, setShowWVKOSPI] = useState(true);
+  const [showKOSPITrend, setShowKOSPITrend] = useState(true);
 
   // KOSDAQ 라인 on/off
   const [showVKOSDAQ, setShowVKOSDAQ] = useState(true);
   const [showWVKOSDAQ, setShowWVKOSDAQ] = useState(true);
+  const [showKOSDAQTrend, setShowKOSDAQTrend] = useState(true);
 
   // 기간
   const [period, setPeriod] = useState("6M");
@@ -291,6 +293,7 @@ function Charts() {
             DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
             VKOSPI: n(item.VKOSPI),
             WVKOSPI: n(item.WVKOSPI),
+            KOSPI: n(item.KOSPI ?? item.kospi),
           }))
           .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
           .sort((a, b) => a.DATE.localeCompare(b.DATE));
@@ -318,6 +321,7 @@ function Charts() {
             DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
             VKOSDAQ: n(item.VKOSDAQ),
             WVKOSDAQ: n(item.WVKOSDAQ),
+            KOSDAQ: n(item.KOSDAQ ?? item.kosdaq),
           }))
           .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
           .sort((a, b) => a.DATE.localeCompare(b.DATE));
@@ -534,6 +538,12 @@ function Charts() {
             >
               WVKOSPI
             </button>
+            <button
+              onClick={() => setShowKOSPITrend((v) => !v)}
+              style={toggleBtnStyle(showKOSPITrend)}
+            >
+              KOSPI Trend
+            </button>
           </div>
         ) : (
           <div
@@ -555,6 +565,12 @@ function Charts() {
               style={toggleBtnStyle(showWVKOSDAQ)}
             >
               WVKOSDAQ
+            </button>
+            <button
+              onClick={() => setShowKOSDAQTrend((v) => !v)}
+              style={toggleBtnStyle(showKOSDAQTrend)}
+            >
+              KOSDAQ Trend
             </button>
           </div>
         )}
@@ -640,10 +656,22 @@ function Charts() {
                 tick={{ fontSize: isMobile ? 10 : 12 }}
               />
               <YAxis
+                yAxisId="left"
                 domain={["auto", "auto"]}
                 width={isMobile ? 42 : 58}
                 tick={{ fontSize: isMobile ? 10 : 12 }}
               />
+              {(activeTab === "KOSPI" || activeTab === "KOSDAQ") && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  domain={["auto", "auto"]}
+                  width={isMobile ? 44 : 60}
+                  tick={{ fontSize: isMobile ? 10 : 12, fill: "#94a3b8" }}
+                  axisLine={{ stroke: "#cbd5e1" }}
+                  tickLine={{ stroke: "#cbd5e1" }}
+                />
+              )}
               <Tooltip />
               <Legend
                 verticalAlign="bottom"
@@ -653,6 +681,7 @@ function Charts() {
               {activeTab === "KOSPI" && showVKOSPI && (
                 <Line
                   type="monotone"
+                  yAxisId="left"
                   dataKey="VKOSPI"
                   stroke="#2ca02c"
                   strokeWidth={3}
@@ -664,6 +693,7 @@ function Charts() {
               {activeTab === "KOSPI" && showWVKOSPI && (
                 <Line
                   type="monotone"
+                  yAxisId="left"
                   dataKey="WVKOSPI"
                   stroke="#ff7f0e"
                   strokeWidth={3}
@@ -672,10 +702,24 @@ function Charts() {
                   name="WVKOSPI"
                 />
               )}
+              {activeTab === "KOSPI" && showKOSPITrend && (
+                <Line
+                  type="monotone"
+                  yAxisId="right"
+                  dataKey="KOSPI"
+                  stroke="#64748b"
+                  strokeOpacity={0.42}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                  name="KOSPI (trend)"
+                />
+              )}
 
               {activeTab === "KOSDAQ" && showVKOSDAQ && (
                 <Line
                   type="monotone"
+                  yAxisId="left"
                   dataKey="VKOSDAQ"
                   stroke="#2ca02c"
                   strokeWidth={3}
@@ -687,12 +731,26 @@ function Charts() {
               {activeTab === "KOSDAQ" && showWVKOSDAQ && (
                 <Line
                   type="monotone"
+                  yAxisId="left"
                   dataKey="WVKOSDAQ"
                   stroke="#ff7f0e"
                   strokeWidth={3}
                   dot={false}
                   activeDot={{ r: 4 }}
                   name="WVKOSDAQ"
+                />
+              )}
+              {activeTab === "KOSDAQ" && showKOSDAQTrend && (
+                <Line
+                  type="monotone"
+                  yAxisId="right"
+                  dataKey="KOSDAQ"
+                  stroke="#64748b"
+                  strokeOpacity={0.42}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                  name="KOSDAQ (trend)"
                 />
               )}
             </LineChart>

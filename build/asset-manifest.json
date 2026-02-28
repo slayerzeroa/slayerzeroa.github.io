@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.5f129534.css",
-    "main.js": "/static/js/main.d993f249.js",
+    "main.css": "/static/css/main.a660ca4d.css",
+    "main.js": "/static/js/main.1226d72a.js",
     "static/media/Tunnel.mp4": "/static/media/Tunnel.81bf6a0b9364edecb5b2.mp4",
     "static/media/PretendardVariable.woff2": "/static/media/PretendardVariable.2bc582461caf4e05b51d.woff2",
     "static/media/FE_background.png": "/static/media/FE_background.4dc7af911efbc4a74c04.png",
@@ -56,7 +56,7 @@
     "static/media/post6.md": "/static/media/post6.42f99e5a177aa857189f.md"
   },
   "entrypoints": [
-    "static/css/main.5f129534.css",
-    "static/js/main.d993f249.js"
+    "static/css/main.a660ca4d.css",
+    "static/js/main.1226d72a.js"
   ]
 }

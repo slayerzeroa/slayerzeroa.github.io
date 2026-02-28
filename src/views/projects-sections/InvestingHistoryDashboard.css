@@ -4,6 +4,7 @@
 }
 
 .investing-history-dashboard-card {
+  --control-height: 40px;
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
@@ -24,7 +25,7 @@
 
 .investing-history-controls {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .investing-history-control-row {
@@ -32,6 +33,29 @@
   gap: 10px;
   align-items: flex-end;
   flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.investing-history-control-row.full-row {
+  width: 100%;
+}
+
+.investing-history-control-row.snapshot-row {
+  align-items: center;
+}
+
+.investing-history-control-row.options-row {
+  display: grid;
+  grid-template-columns: 96px 120px auto minmax(200px, 1fr) auto;
+  align-items: end;
+  column-gap: 10px;
+}
+
+.investing-history-control-row.action-row {
+  justify-content: flex-end;
 }
 
 .investing-history-control-label {
@@ -47,10 +71,20 @@
   min-width: 280px;
 }
 
+.investing-history-control-label.full-width {
+  width: 100%;
+  min-width: 0;
+}
+
+.investing-history-control-label.snapshot-date-picker {
+  min-width: 220px;
+}
+
 .investing-history-control-label input[type="date"],
 .investing-history-control-label input[type="number"],
-.investing-history-control-label input[list] {
-  height: 36px;
+.investing-history-control-label input[list],
+.investing-history-control-label input[type="text"] {
+  height: var(--control-height);
   border: 1px solid #cfd8dc;
   border-radius: 8px;
   padding: 0 10px;
@@ -62,8 +96,45 @@
   width: 100%;
 }
 
+.investing-history-snapshot-slider-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 10px;
+}
+
+.investing-history-snapshot-slider-wrap input[type="range"] {
+  margin-top: 4px;
+}
+
+.investing-history-snapshot-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  pointer-events: none;
+}
+
+.investing-history-snapshot-marker {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: #b6c2cd;
+  border: 1px solid #e2e8f0;
+}
+
+.investing-history-snapshot-marker.active {
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
 .investing-history-control-row button {
-  height: 36px;
+  height: var(--control-height);
   border: 0;
   border-radius: 8px;
   padding: 0 12px;
@@ -77,9 +148,169 @@
   cursor: not-allowed;
 }
 
+.investing-history-view-toggle {
+  display: inline-flex;
+  border: 1px solid #cfd8dc;
+  border-radius: 8px;
+  overflow: hidden;
+  height: var(--control-height);
+}
+
+.investing-history-view-toggle .investing-history-view-button {
+  min-width: 62px;
+  border-radius: 0;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.investing-history-view-toggle .investing-history-view-button + .investing-history-view-button {
+  border-left: 1px solid #cfd8dc;
+}
+
+.investing-history-view-toggle .investing-history-view-button.active,
+.investing-history-view-toggle .investing-history-view-button[aria-pressed="true"] {
+  background: #1e3a5f;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px #1e3a5f;
+}
+
 .investing-history-snapshot-label {
   font-size: 12px;
   color: #4b5563;
+}
+
+.investing-history-stock-search {
+  position: relative;
+  width: 100%;
+}
+
+.investing-history-stock-search input {
+  width: 100%;
+}
+
+.investing-history-stock-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  z-index: 20;
+}
+
+.investing-history-stock-suggestions .investing-history-stock-suggestion {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid #eceff3;
+  border-radius: 0;
+  background: #fff;
+  text-align: left;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+  box-shadow: none;
+}
+
+.investing-history-stock-suggestion:last-child {
+  border-bottom: 0;
+}
+
+.investing-history-stock-suggestions .investing-history-stock-suggestion.active,
+.investing-history-stock-suggestions .investing-history-stock-suggestion:hover {
+  background: #fff;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.investing-history-stock-suggestion.muted {
+  cursor: default;
+  color: #6b7280;
+}
+
+.investing-history-control-label.highlight-hops-inline {
+  flex: 1 1 280px;
+  min-width: 240px;
+}
+
+.investing-history-control-label.view-mode-control {
+  min-width: 150px;
+}
+
+.investing-history-control-label.max-edges-control,
+.investing-history-control-label.db-limit-control {
+  min-width: 0;
+}
+
+.investing-history-control-label.max-edges-control input[type="number"],
+.investing-history-control-label.db-limit-control input[type="number"] {
+  width: 100%;
+}
+
+.investing-history-control-hint {
+  font-size: 11px;
+  line-height: 1;
+  color: #64748b;
+}
+
+.investing-history-inline-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-left: 0;
+  justify-content: flex-end;
+  align-self: end;
+}
+
+.investing-history-inline-actions button {
+  min-width: 110px;
+}
+
+.investing-history-inline-actions .investing-history-back-arrow-button {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.investing-history-control-row.options-row .investing-history-control-label input[type="number"],
+.investing-history-control-row.options-row .investing-history-view-toggle,
+.investing-history-control-row.options-row .investing-history-inline-actions button,
+.investing-history-control-row.options-row .investing-history-control-label input[type="range"] {
+  height: var(--control-height);
+}
+
+@media (max-width: 1040px) {
+  .investing-history-control-row.options-row {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .investing-history-control-label.max-edges-control,
+  .investing-history-control-label.db-limit-control {
+    min-width: 96px;
+  }
+
+  .investing-history-inline-actions {
+    margin-left: auto;
+  }
 }
 
 .investing-history-status {
@@ -153,5 +384,15 @@
 
   .investing-history-control-label {
     font-size: 12px;
+  }
+
+  .investing-history-control-label.snapshot-date-picker {
+    min-width: 100%;
+  }
+
+  .investing-history-inline-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-end;
   }
 }

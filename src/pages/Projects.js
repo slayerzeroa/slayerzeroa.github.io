@@ -52,7 +52,7 @@ function Projects() {
           <Board /> */}
 
           <Charts />
-          <InvestingHistoryDashboard />
+          {/* <InvestingHistoryDashboard /> */}
           {/* </div> */}
           <Executive />
         </div>
