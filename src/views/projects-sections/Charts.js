@@ -27,7 +27,10 @@ console.log("API_BASE_URL:", API_BASE_URL);
 // Access TTL이 10m 이므로 8분마다 갱신 시도
 const TOKEN_REFRESH_MS = 8 * 60 * 1000;
 // 차트 데이터 폴링 주기
-const POLL_MS = 30 * 1000;
+const MIN_POLL_MS = 60 * 1000;
+const POLL_BASE_MS = 90 * 1000;
+const POLL_JITTER_MS = 30 * 1000;
+const POLL_HIDDEN_RECHECK_MS = 15 * 1000;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -185,8 +188,35 @@ function Charts() {
   const toDate = (yyyyMmDd) => new Date(`${yyyyMmDd}T00:00:00`);
 
   const n = (x) => {
+    if (x === null || x === undefined || x === "") {
+      return null;
+    }
     const v = Number(x);
     return Number.isFinite(v) ? v : null;
+  };
+
+  const fillForwardValues = (rows, valueKeys) => {
+    const prevByKey = {};
+
+    return rows.map((row) => {
+      const nextRow = { ...row };
+
+      valueKeys.forEach((key) => {
+        const current = nextRow[key];
+        const hasCurrent = Number.isFinite(current);
+
+        if (hasCurrent) {
+          prevByKey[key] = current;
+          return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(prevByKey, key)) {
+          nextRow[key] = prevByKey[key];
+        }
+      });
+
+      return nextRow;
+    });
   };
 
   // 화면 크기 추적
@@ -269,120 +299,153 @@ function Charts() {
     let mounted = true;
     let timeoutId = null;
     let controller = null;
+    let inFlight = false;
 
-    const fetchData = async () => {
+    const nextPollDelay = () => {
+      const jitter = (Math.random() * 2 - 1) * POLL_JITTER_MS;
+      return Math.max(MIN_POLL_MS, Math.round(POLL_BASE_MS + jitter));
+    };
+
+    const scheduleNext = () => {
+      if (!mounted) {
+        return;
+      }
+      const delay = document.hidden ? POLL_HIDDEN_RECHECK_MS : nextPollDelay();
+      timeoutId = setTimeout(runCycle, delay);
+    };
+
+    const mapKospiData = (rows) => {
+      const normalized = (rows || [])
+        .map((item) => ({
+          DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
+          VKOSPI: n(item.VKOSPI),
+          WVKOSPI: n(item.WVKOSPI),
+          KOSPI: n(item.KOSPI ?? item.kospi),
+        }))
+        .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
+        .sort((a, b) => a.DATE.localeCompare(b.DATE));
+      return fillForwardValues(normalized, ["VKOSPI", "WVKOSPI", "KOSPI"]);
+    };
+
+    const mapKosdaqData = (rows) => {
+      const normalized = (rows || [])
+        .map((item) => ({
+          DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
+          VKOSDAQ: n(item.VKOSDAQ),
+          WVKOSDAQ: n(item.WVKOSDAQ),
+          KOSDAQ: n(item.KOSDAQ ?? item.kosdaq),
+        }))
+        .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
+        .sort((a, b) => a.DATE.localeCompare(b.DATE));
+      return fillForwardValues(normalized, ["VKOSDAQ", "WVKOSDAQ", "KOSDAQ"]);
+    };
+
+    const hydrateDateRangeIfEmpty = (rows) => {
+      if (!rows.length) {
+        return;
+      }
+      setStartDate((prev) => prev || rows[0].DATE);
+      setEndDate((prev) => prev || rows[rows.length - 1].DATE);
+    };
+
+    const runCycle = async () => {
+      if (!mounted || inFlight) {
+        return;
+      }
+      if (document.hidden) {
+        scheduleNext();
+        return;
+      }
+
+      inFlight = true;
       controller = new AbortController();
+      const isKospiTab = activeTab === "KOSPI";
+      const endpoint = isKospiTab ? "/vkospi" : "/vkosdaq";
 
-      const [resKospi, resKosdaq] = await Promise.allSettled([
-        api.get("/vkospi", {
+      try {
+        const response = await api.get(endpoint, {
           params: { limit: 1500 },
           signal: controller.signal,
-        }),
-        api.get("/vkosdaq", {
-          params: { limit: 1500 },
-          signal: controller.signal,
-        }),
-      ]);
+        });
 
-      if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
 
-      // KOSPI 처리
-      if (resKospi.status === "fulfilled") {
-        const p = (resKospi.value.data || [])
-          .map((item) => ({
-            DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
-            VKOSPI: n(item.VKOSPI),
-            WVKOSPI: n(item.WVKOSPI),
-            KOSPI: n(item.KOSPI ?? item.kospi),
-          }))
-          .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
-          .sort((a, b) => a.DATE.localeCompare(b.DATE));
+        if (isKospiTab) {
+          const rows = mapKospiData(response.data);
+          setKospiData(rows);
+          setErrors((prev) => ({ ...prev, kospi: null }));
+          hydrateDateRangeIfEmpty(rows);
+        } else {
+          const rows = mapKosdaqData(response.data);
+          setKosdaqData(rows);
+          setErrors((prev) => ({ ...prev, kosdaq: null }));
+          hydrateDateRangeIfEmpty(rows);
+        }
+      } catch (fetchError) {
+        if (!mounted || fetchError?.name === "CanceledError") {
+          return;
+        }
 
-        setKospiData(p);
-        setErrors((prev) => ({ ...prev, kospi: null }));
-      } else {
-        if (resKospi.reason?.name !== "CanceledError") {
-          console.error("KOSPI 데이터 오류:", resKospi.reason);
+        if (isKospiTab) {
+          console.error("KOSPI 데이터 오류:", fetchError);
           setKospiData([]);
           setErrors((prev) => ({
             ...prev,
             kospi:
-              resKospi.reason?.response?.status === 401
+              fetchError?.response?.status === 401
                 ? "인증 오류(토큰 만료/재발급 실패)"
                 : "VKOSPI API 호출 실패",
           }));
-        }
-      }
-
-      // KOSDAQ 처리
-      if (resKosdaq.status === "fulfilled") {
-        const q = (resKosdaq.value.data || [])
-          .map((item) => ({
-            DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
-            VKOSDAQ: n(item.VKOSDAQ),
-            WVKOSDAQ: n(item.WVKOSDAQ),
-            KOSDAQ: n(item.KOSDAQ ?? item.kosdaq),
-          }))
-          .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
-          .sort((a, b) => a.DATE.localeCompare(b.DATE));
-
-        setKosdaqData(q);
-        setErrors((prev) => ({ ...prev, kosdaq: null }));
-      } else {
-        if (resKosdaq.reason?.name !== "CanceledError") {
-          console.error("KOSDAQ 데이터 오류:", resKosdaq.reason);
+        } else {
+          console.error("KOSDAQ 데이터 오류:", fetchError);
           setKosdaqData([]);
           setErrors((prev) => ({
             ...prev,
             kosdaq:
-              resKosdaq.reason?.response?.status === 401
+              fetchError?.response?.status === 401
                 ? "인증 오류(토큰 만료/재발급 실패)"
                 : "VKOSDAQ API 호출 실패",
           }));
         }
-      }
-
-      // 날짜 초기값 (처음 1회만 자동 세팅)
-      const pData =
-        resKospi.status === "fulfilled"
-          ? (resKospi.value.data || [])
-              .map((item) => ({
-                DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
-              }))
-              .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
-              .sort((a, b) => a.DATE.localeCompare(b.DATE))
-          : [];
-
-      const qData =
-        resKosdaq.status === "fulfilled"
-          ? (resKosdaq.value.data || [])
-              .map((item) => ({
-                DATE: formatYYYYMMDD(item.BAS_DD ?? item.DATE),
-              }))
-              .filter((d) => d.DATE && !Number.isNaN(toDate(d.DATE).getTime()))
-              .sort((a, b) => a.DATE.localeCompare(b.DATE))
-          : [];
-
-      const seed = pData.length ? pData : qData;
-      if (seed.length) {
-        setStartDate((prev) => prev || seed[0].DATE);
-        setEndDate((prev) => prev || seed[seed.length - 1].DATE);
-      }
-
-      // 다음 polling 예약
-      if (mounted) {
-        timeoutId = setTimeout(fetchData, POLL_MS);
+      } finally {
+        inFlight = false;
+        controller = null;
+        scheduleNext();
       }
     };
 
-    fetchData();
+    const onVisibilityChange = () => {
+      if (!mounted) {
+        return;
+      }
+
+      if (document.hidden) {
+        if (controller) {
+          controller.abort();
+          controller = null;
+        }
+        return;
+      }
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      runCycle();
+    };
+
+    runCycle();
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       mounted = false;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       if (timeoutId) clearTimeout(timeoutId);
       if (controller) controller.abort();
     };
-  }, []);
+  }, [activeTab]);
 
   const activeData = activeTab === "KOSPI" ? kospiData : kosdaqData;
   const activeError = activeTab === "KOSPI" ? errors.kospi : errors.kosdaq;

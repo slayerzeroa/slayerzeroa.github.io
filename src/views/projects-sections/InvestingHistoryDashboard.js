@@ -3,9 +3,14 @@ import Plot from "react-plotly.js";
 import "./InvestingHistoryDashboard.css";
 
 const SYSTEM_MAX_EDGES = 50;
+const SYSTEM_MAX_DB_LIMIT = 20000;
 const STOCK_OPTIONS_LIMIT = 5000;
 const STOCK_SEARCH_DEBOUNCE_MS = 180;
 const STOCK_FUZZY_MATCH_THRESHOLD = 0.8;
+const GRAPH_QUERY_TIMEOUT_MS = 20000;
+const STOCK_QUERY_TIMEOUT_MS = 12000;
+const GRAPH_QUERY_CACHE_TTL_MS = 15000;
+const GRAPH_QUERY_CACHE_MAX_ITEMS = 200;
 const SNAPSHOT_SLIDER_MIN_DATE = "2000-01-01";
 const SNAPSHOT_SLIDER_MAX_DATE = "2026-02-18";
 const SNAPSHOT_RANGE_START = SNAPSHOT_SLIDER_MIN_DATE;
@@ -16,6 +21,7 @@ const CLIENT_HOP_LEVEL_LIMIT = 20;
 const GRAPH_API_BASE_URL = (
   process.env.REACT_APP_GRAPH_API_BASE_URL || "https://api2.slayerzeroa.click"
 ).trim();
+const graphQueryCache = new Map();
 
 const HISTORY_KEYS = [
   "investing_history",
@@ -129,6 +135,45 @@ function buildApiUrl(path) {
   const base = GRAPH_API_BASE_URL.replace(/\/+$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalizedPath}`;
+}
+
+function createTimedRequestSignal(timeoutMs, externalSignal = null) {
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timerId);
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+      }
+    },
+  };
+}
+
+function setGraphQueryCache(cacheKey, data) {
+  graphQueryCache.set(cacheKey, {
+    cachedAt: Date.now(),
+    data,
+  });
+
+  while (graphQueryCache.size > GRAPH_QUERY_CACHE_MAX_ITEMS) {
+    const oldestKey = graphQueryCache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+    graphQueryCache.delete(oldestKey);
+  }
 }
 
 function normalizeRows(rawRows) {
@@ -1017,18 +1062,38 @@ function convert3DTraceTo2D(trace) {
 }
 
 async function postGraphQuery(payload) {
-  const res = await fetch(buildApiUrl("/api/graph/query"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || `HTTP ${res.status}`);
+  const cacheKey = JSON.stringify(payload || {});
+  const cached = graphQueryCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt <= GRAPH_QUERY_CACHE_TTL_MS) {
+    return cached.data;
   }
 
-  return res.json();
+  const { signal, cleanup } = createTimedRequestSignal(GRAPH_QUERY_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(buildApiUrl("/api/graph/query"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    setGraphQueryCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Graph query timed out.");
+    }
+    throw error;
+  } finally {
+    cleanup();
+  }
 }
 
 async function fetchStockOptions(params, signal) {
@@ -1040,14 +1105,27 @@ async function fetchStockOptions(params, signal) {
     }
   });
 
-  const res = await fetch(buildApiUrl(`/api/stocks?${usp.toString()}`), { signal });
+  const timed = createTimedRequestSignal(STOCK_QUERY_TIMEOUT_MS, signal);
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || `HTTP ${res.status}`);
+  try {
+    const res = await fetch(buildApiUrl(`/api/stocks?${usp.toString()}`), {
+      signal: timed.signal,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  } catch (error) {
+    if (error?.name === "AbortError" && !signal?.aborted) {
+      throw new Error("Stock list query timed out.");
+    }
+    throw error;
+  } finally {
+    timed.cleanup();
   }
-
-  return res.json();
 }
 
 async function fetchSnapshotDatesForStock(searchStock) {
@@ -1540,7 +1618,9 @@ function InvestingHistoryDashboard() {
         1,
         Math.min(Number(maxEdges || SYSTEM_MAX_EDGES), SYSTEM_MAX_EDGES),
       );
-      const effectiveDbLimit = dbLimit ? Number(dbLimit) : null;
+      const effectiveDbLimit = dbLimit
+        ? Math.max(1, Math.min(Number(dbLimit), SYSTEM_MAX_DB_LIMIT))
+        : null;
       const payload = {
         start_date: SNAPSHOT_RANGE_START,
         end_date: SNAPSHOT_RANGE_END,
@@ -2124,9 +2204,24 @@ function InvestingHistoryDashboard() {
               <input
                 type="number"
                 min={1}
+                max={SYSTEM_MAX_DB_LIMIT}
                 placeholder="optional"
                 value={dbLimit}
-                onChange={(event) => setDbLimit(event.target.value)}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (raw === "") {
+                    setDbLimit("");
+                    return;
+                  }
+
+                  const clamped = Math.max(
+                    1,
+                    Math.min(Number(raw), SYSTEM_MAX_DB_LIMIT),
+                  );
+                  if (Number.isFinite(clamped)) {
+                    setDbLimit(String(clamped));
+                  }
+                }}
               />
             </label>
             <label className="investing-history-control-label view-mode-control">
