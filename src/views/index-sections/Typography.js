@@ -45,7 +45,7 @@ function Typography() {
                 </h5>
               </div>
               <div className="history-line">
-                <span>2018</span>
+                <span>2017</span>
                 <h5>
                   인천광역시교육청 수학탐구발표대회 동상<br></br>
                 </h5>

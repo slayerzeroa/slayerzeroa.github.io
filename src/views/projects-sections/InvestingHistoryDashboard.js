@@ -9,8 +9,12 @@ const STOCK_SEARCH_DEBOUNCE_MS = 180;
 const STOCK_FUZZY_MATCH_THRESHOLD = 0.8;
 const GRAPH_QUERY_TIMEOUT_MS = 20000;
 const STOCK_QUERY_TIMEOUT_MS = 12000;
-const GRAPH_QUERY_CACHE_TTL_MS = 15000;
-const GRAPH_QUERY_CACHE_MAX_ITEMS = 200;
+const GRAPH_QUERY_CACHE_TTL_MS = 20000;
+const GRAPH_QUERY_CACHE_MAX_ITEMS = 256;
+const STOCK_QUERY_CACHE_TTL_MS = 60000;
+const STOCK_QUERY_CACHE_MAX_ITEMS = 256;
+const SNAPSHOT_QUERY_CACHE_TTL_MS = 60000;
+const SNAPSHOT_QUERY_CACHE_MAX_ITEMS = 256;
 const SNAPSHOT_SLIDER_MIN_DATE = "2000-01-01";
 const SNAPSHOT_SLIDER_MAX_DATE = "2026-02-18";
 const SNAPSHOT_RANGE_START = SNAPSHOT_SLIDER_MIN_DATE;
@@ -21,7 +25,59 @@ const CLIENT_HOP_LEVEL_LIMIT = 20;
 const GRAPH_API_BASE_URL = (
   process.env.REACT_APP_GRAPH_API_BASE_URL || "https://api2.slayerzeroa.click"
 ).trim();
-const graphQueryCache = new Map();
+
+class TTLCache {
+  constructor(maxItems, ttlMs) {
+    this.maxItems = Math.max(Number(maxItems) || 1, 1);
+    this.ttlMs = Math.max(Number(ttlMs) || 1, 1);
+    this.store = new Map();
+  }
+
+  get(key) {
+    const item = this.store.get(key);
+    if (!item) {
+      return null;
+    }
+
+    if (Date.now() >= item.expiresAt) {
+      this.store.delete(key);
+      return null;
+    }
+
+    this.store.delete(key);
+    this.store.set(key, item);
+    return item.value;
+  }
+
+  set(key, value) {
+    this.store.set(key, {
+      expiresAt: Date.now() + this.ttlMs,
+      value,
+    });
+
+    while (this.store.size > this.maxItems) {
+      const oldestKey = this.store.keys().next().value;
+      if (!oldestKey) {
+        break;
+      }
+      this.store.delete(oldestKey);
+    }
+  }
+}
+
+const graphQueryCache = new TTLCache(
+  GRAPH_QUERY_CACHE_MAX_ITEMS,
+  GRAPH_QUERY_CACHE_TTL_MS,
+);
+const stockQueryCache = new TTLCache(
+  STOCK_QUERY_CACHE_MAX_ITEMS,
+  STOCK_QUERY_CACHE_TTL_MS,
+);
+const snapshotDateCache = new TTLCache(
+  SNAPSHOT_QUERY_CACHE_MAX_ITEMS,
+  SNAPSHOT_QUERY_CACHE_TTL_MS,
+);
+const graphQueryInFlight = new Map();
 
 const HISTORY_KEYS = [
   "investing_history",
@@ -161,21 +217,6 @@ function createTimedRequestSignal(timeoutMs, externalSignal = null) {
   };
 }
 
-function setGraphQueryCache(cacheKey, data) {
-  graphQueryCache.set(cacheKey, {
-    cachedAt: Date.now(),
-    data,
-  });
-
-  while (graphQueryCache.size > GRAPH_QUERY_CACHE_MAX_ITEMS) {
-    const oldestKey = graphQueryCache.keys().next().value;
-    if (!oldestKey) {
-      break;
-    }
-    graphQueryCache.delete(oldestKey);
-  }
-}
-
 function normalizeRows(rawRows) {
   if (!Array.isArray(rawRows)) {
     return [];
@@ -213,10 +254,15 @@ function normalizeCompanyName(rawName) {
     return "";
   }
 
-  let normalized = String(rawName).trim();
-  if (!normalized) {
+  const raw = String(rawName).replace(/\r/g, " ").replace(/\n/g, " ").trim();
+  if (!raw) {
     return "";
   }
+
+  let normalized = raw.replace(/\s+/g, " ").trim();
+  normalized = normalized
+    .replace(/^\(?가칭\)?\s*/i, "")
+    .replace(/\s*\(?가칭\)?$/i, "");
 
   normalized = normalized
     .replace(/\([^)]*\)/g, " ")
@@ -226,10 +272,26 @@ function normalizeCompanyName(rawName) {
     .replace(/\s+/g, " ")
     .trim();
 
-  normalized = normalized.replace(/^(?:주식회사|㈜|\(주\))\s*/i, "");
+  let prevLegal = "";
+  while (prevLegal !== normalized) {
+    prevLegal = normalized;
+    normalized = normalized
+      .replace(/^\(주\)\s*/i, "")
+      .replace(/^㈜\s*/i, "")
+      .replace(/^주식회사\s*/i, "")
+      .replace(/\s+\(주\)$/i, "")
+      .replace(/\s+주식회사$/i, "")
+      .trim();
+  }
+
+  normalized = normalized
+    .replace(/㈜/g, "")
+    .replace(/\(주\)/gi, "")
+    .replace(/주식회사/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   const suffixPatterns = [
-    /\s*(?:주식회사|㈜|\(주\))$/i,
     /\s*(?:co\.?\s*,?\s*ltd\.?|co\.?\s*ltd\.?|corp(?:oration)?\.?|inc(?:orporated)?\.?|ltd\.?|limited)$/i,
     /\s*(?:l\.?l\.?c\.?|llc|plc|gmbh|ag|sa|nv|bv)$/i,
     /\s*(?:holdings?|hldgs?)$/i,
@@ -246,7 +308,7 @@ function normalizeCompanyName(rawName) {
   }
 
   normalized = normalized.replace(/[\s,;:|/-]+$/g, "").trim();
-  return normalized || String(rawName).trim();
+  return normalized || raw;
 }
 
 function formatCellValue(value, columnName = "") {
@@ -1064,46 +1126,68 @@ function convert3DTraceTo2D(trace) {
 async function postGraphQuery(payload) {
   const cacheKey = JSON.stringify(payload || {});
   const cached = graphQueryCache.get(cacheKey);
-  if (cached && Date.now() - cached.cachedAt <= GRAPH_QUERY_CACHE_TTL_MS) {
-    return cached.data;
+  if (cached !== null) {
+    return cached;
   }
 
-  const { signal, cleanup } = createTimedRequestSignal(GRAPH_QUERY_TIMEOUT_MS);
+  const inFlight = graphQueryInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
 
+  const requestPromise = (async () => {
+    const { signal, cleanup } = createTimedRequestSignal(GRAPH_QUERY_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(buildApiUrl("/api/graph/query"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      graphQueryCache.set(cacheKey, data);
+      return data;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error("Graph query timed out.");
+      }
+      throw error;
+    } finally {
+      cleanup();
+    }
+  })();
+
+  graphQueryInFlight.set(cacheKey, requestPromise);
   try {
-    const res = await fetch(buildApiUrl("/api/graph/query"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal,
-    });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
-    setGraphQueryCache(cacheKey, data);
-    return data;
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error("Graph query timed out.");
-    }
-    throw error;
+    return await requestPromise;
   } finally {
-    cleanup();
+    graphQueryInFlight.delete(cacheKey);
   }
 }
 
 async function fetchStockOptions(params, signal) {
-  const usp = new URLSearchParams();
+  const normalizedEntries = Object.entries(params || {})
+    .filter(([_key, value]) => value !== undefined && value !== null && `${value}` !== "")
+    .map(([key, value]) => [key, `${value}`])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
-  Object.entries(params || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && `${value}` !== "") {
-      usp.append(key, `${value}`);
-    }
+  const usp = new URLSearchParams();
+  normalizedEntries.forEach(([key, value]) => {
+    usp.append(key, value);
   });
+
+  const cacheKey = usp.toString();
+  const cached = stockQueryCache.get(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
 
   const timed = createTimedRequestSignal(STOCK_QUERY_TIMEOUT_MS, signal);
 
@@ -1117,7 +1201,9 @@ async function fetchStockOptions(params, signal) {
       throw new Error(txt || `HTTP ${res.status}`);
     }
 
-    return res.json();
+    const data = await res.json();
+    stockQueryCache.set(cacheKey, data);
+    return data;
   } catch (error) {
     if (error?.name === "AbortError" && !signal?.aborted) {
       throw new Error("Stock list query timed out.");
@@ -1129,17 +1215,30 @@ async function fetchStockOptions(params, signal) {
 }
 
 async function fetchSnapshotDatesForStock(searchStock) {
+  const normalizedSearchStock = String(searchStock || "").trim();
+  const cacheKey = JSON.stringify({
+    start_date: SNAPSHOT_RANGE_START,
+    end_date: SNAPSHOT_RANGE_END,
+    search_stock: normalizedSearchStock,
+  });
+  const cached = snapshotDateCache.get(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
   const payload = {
     start_date: SNAPSHOT_RANGE_START,
     end_date: SNAPSHOT_RANGE_END,
     snapshot_date: null,
-    search_stock: searchStock || null,
+    search_stock: normalizedSearchStock || null,
     highlight_hops: 0,
     max_edges: 1,
     db_limit: 1,
   };
   const data = await postGraphQuery(payload);
-  return normalizeSnapshotDateList(data.snapshot_dates);
+  const dates = normalizeSnapshotDateList(data.snapshot_dates);
+  snapshotDateCache.set(cacheKey, dates);
+  return dates;
 }
 
 function InvestingHistoryDashboard() {

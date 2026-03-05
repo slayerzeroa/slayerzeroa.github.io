@@ -20,17 +20,11 @@ import {
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "https://slayerzeroa.click";
 const AUTH_CLIENT_KEY = process.env.REACT_APP_AUTH_CLIENT_KEY || "";
+const RESPONSE_ENCRYPTION_KEY =
+  process.env.REACT_APP_RESPONSE_ENCRYPTION_KEY || "";
 
 console.log("API_BASE_URL:", API_BASE_URL);
 // console.log("AUTH_CLIENT_KEY:", AUTH_CLIENT_KEY);
-
-// Access TTL이 10m 이므로 8분마다 갱신 시도
-const TOKEN_REFRESH_MS = 8 * 60 * 1000;
-// 차트 데이터 폴링 주기
-const MIN_POLL_MS = 60 * 1000;
-const POLL_BASE_MS = 90 * 1000;
-const POLL_JITTER_MS = 30 * 1000;
-const POLL_HIDDEN_RECHECK_MS = 15 * 1000;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -44,6 +38,71 @@ let refreshPromise = null;
 
 function setAccessToken(token) {
   accessToken = token || null;
+}
+
+function base64ToBytes(base64) {
+  const normalized = String(base64 || "").replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  const binary = window.atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function concatBytes(a, b) {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+}
+
+async function deriveAesGcmKey(passphrase) {
+  const passBytes = new TextEncoder().encode(passphrase);
+  const digest = await window.crypto.subtle.digest("SHA-256", passBytes);
+  return window.crypto.subtle.importKey(
+    "raw",
+    digest,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"],
+  );
+}
+
+async function maybeDecryptPayload(payload) {
+  if (!payload || payload.encrypted !== true) {
+    return payload;
+  }
+
+  if (!RESPONSE_ENCRYPTION_KEY) {
+    throw new Error(
+      "REACT_APP_RESPONSE_ENCRYPTION_KEY is missing for encrypted API payload",
+    );
+  }
+
+  if (!window?.crypto?.subtle) {
+    throw new Error("Web Crypto API is not available in this environment");
+  }
+
+  const iv = base64ToBytes(payload.iv);
+  const tag = base64ToBytes(payload.tag);
+  const ciphertext = base64ToBytes(payload.data);
+  const encryptedWithTag = concatBytes(ciphertext, tag);
+
+  const key = await deriveAesGcmKey(RESPONSE_ENCRYPTION_KEY);
+  const plainBuffer = await window.crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv,
+      tagLength: 128,
+    },
+    key,
+    encryptedWithTag,
+  );
+
+  const plainText = new TextDecoder().decode(plainBuffer);
+  return JSON.parse(plainText);
 }
 
 async function issueAccessToken() {
@@ -100,7 +159,10 @@ api.interceptors.request.use(async (config) => {
 
 // 응답 인터셉터: 401이면 refresh 후 1회 재시도
 api.interceptors.response.use(
-  (res) => res,
+  async (res) => {
+    res.data = await maybeDecryptPayload(res.data);
+    return res;
+  },
   async (error) => {
     const original = error?.config || {};
     const status = error?.response?.status;
@@ -252,67 +314,10 @@ function Charts() {
     return () => ro.disconnect();
   }, []);
 
-  // 1) 초기 토큰 발급 + 2) 주기적 refresh
-  useEffect(() => {
-    let alive = true;
-    let timerId;
-
-    const bootstrapAuth = async () => {
-      try {
-        await issueAccessToken();
-      } catch (e) {
-        if (!alive) return;
-        console.error("초기 토큰 발급 실패:", e);
-        setErrors({
-          kospi: "인증 실패(토큰 발급 실패)",
-          kosdaq: "인증 실패(토큰 발급 실패)",
-        });
-      }
-    };
-
-    const refreshLoop = () => {
-      timerId = setInterval(async () => {
-        try {
-          await refreshAccessToken();
-        } catch (e) {
-          try {
-            // refresh 실패하면 재발급 재시도
-            await issueAccessToken();
-          } catch (e2) {
-            if (!alive) return;
-            console.error("토큰 갱신/재발급 실패:", e2);
-          }
-        }
-      }, TOKEN_REFRESH_MS);
-    };
-
-    bootstrapAuth().then(refreshLoop);
-
-    return () => {
-      alive = false;
-      if (timerId) clearInterval(timerId);
-    };
-  }, []);
-
-  // 데이터 fetch + 주기 polling
+  // 데이터 fetch (초기 1회)
   useEffect(() => {
     let mounted = true;
-    let timeoutId = null;
-    let controller = null;
-    let inFlight = false;
-
-    const nextPollDelay = () => {
-      const jitter = (Math.random() * 2 - 1) * POLL_JITTER_MS;
-      return Math.max(MIN_POLL_MS, Math.round(POLL_BASE_MS + jitter));
-    };
-
-    const scheduleNext = () => {
-      if (!mounted) {
-        return;
-      }
-      const delay = document.hidden ? POLL_HIDDEN_RECHECK_MS : nextPollDelay();
-      timeoutId = setTimeout(runCycle, delay);
-    };
+    const controller = new AbortController();
 
     const mapKospiData = (rows) => {
       const normalized = (rows || [])
@@ -348,104 +353,88 @@ function Charts() {
       setEndDate((prev) => prev || rows[rows.length - 1].DATE);
     };
 
-    const runCycle = async () => {
-      if (!mounted || inFlight) {
-        return;
-      }
-      if (document.hidden) {
-        scheduleNext();
-        return;
-      }
-
-      inFlight = true;
-      controller = new AbortController();
-      const isKospiTab = activeTab === "KOSPI";
-      const endpoint = isKospiTab ? "/vkospi" : "/vkosdaq";
-
+    const fetchInitialData = async () => {
       try {
-        const response = await api.get(endpoint, {
-          params: { limit: 1500 },
-          signal: controller.signal,
-        });
-
+        await getValidAccessToken();
+      } catch (authError) {
         if (!mounted) {
           return;
         }
-
-        if (isKospiTab) {
-          const rows = mapKospiData(response.data);
-          setKospiData(rows);
-          setErrors((prev) => ({ ...prev, kospi: null }));
-          hydrateDateRangeIfEmpty(rows);
-        } else {
-          const rows = mapKosdaqData(response.data);
-          setKosdaqData(rows);
-          setErrors((prev) => ({ ...prev, kosdaq: null }));
-          hydrateDateRangeIfEmpty(rows);
-        }
-      } catch (fetchError) {
-        if (!mounted || fetchError?.name === "CanceledError") {
-          return;
-        }
-
-        if (isKospiTab) {
-          console.error("KOSPI 데이터 오류:", fetchError);
-          setKospiData([]);
-          setErrors((prev) => ({
-            ...prev,
-            kospi:
-              fetchError?.response?.status === 401
-                ? "인증 오류(토큰 만료/재발급 실패)"
-                : "VKOSPI API 호출 실패",
-          }));
-        } else {
-          console.error("KOSDAQ 데이터 오류:", fetchError);
-          setKosdaqData([]);
-          setErrors((prev) => ({
-            ...prev,
-            kosdaq:
-              fetchError?.response?.status === 401
-                ? "인증 오류(토큰 만료/재발급 실패)"
-                : "VKOSDAQ API 호출 실패",
-          }));
-        }
-      } finally {
-        inFlight = false;
-        controller = null;
-        scheduleNext();
+        console.error("초기 토큰 발급 실패:", authError);
+        setErrors({
+          kospi: "인증 실패(토큰 발급 실패)",
+          kosdaq: "인증 실패(토큰 발급 실패)",
+        });
+        return;
       }
-    };
 
-    const onVisibilityChange = () => {
+      const [resKospi, resKosdaq] = await Promise.allSettled([
+        api.get("/vkospi", {
+          params: { limit: 1500 },
+          signal: controller.signal,
+        }),
+        api.get("/vkosdaq", {
+          params: { limit: 1500 },
+          signal: controller.signal,
+        }),
+      ]);
+
       if (!mounted) {
         return;
       }
 
-      if (document.hidden) {
-        if (controller) {
-          controller.abort();
-          controller = null;
+      let seedRows = [];
+
+      if (resKospi.status === "fulfilled") {
+        const rows = mapKospiData(resKospi.value.data);
+        setKospiData(rows);
+        setErrors((prev) => ({ ...prev, kospi: null }));
+        if (!seedRows.length) {
+          seedRows = rows;
         }
-        return;
+      } else if (resKospi.reason?.name !== "CanceledError") {
+        console.error("KOSPI 데이터 오류:", resKospi.reason);
+        setKospiData([]);
+        setErrors((prev) => ({
+          ...prev,
+          kospi:
+            resKospi.reason?.response?.status === 401
+              ? "인증 오류(토큰 만료/재발급 실패)"
+              : "VKOSPI API 호출 실패",
+        }));
       }
 
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
+      if (resKosdaq.status === "fulfilled") {
+        const rows = mapKosdaqData(resKosdaq.value.data);
+        setKosdaqData(rows);
+        setErrors((prev) => ({ ...prev, kosdaq: null }));
+        if (!seedRows.length) {
+          seedRows = rows;
+        }
+      } else if (resKosdaq.reason?.name !== "CanceledError") {
+        console.error("KOSDAQ 데이터 오류:", resKosdaq.reason);
+        setKosdaqData([]);
+        setErrors((prev) => ({
+          ...prev,
+          kosdaq:
+            resKosdaq.reason?.response?.status === 401
+              ? "인증 오류(토큰 만료/재발급 실패)"
+              : "VKOSDAQ API 호출 실패",
+        }));
       }
-      runCycle();
+
+      if (seedRows.length) {
+        hydrateDateRangeIfEmpty(seedRows);
+      }
     };
 
-    runCycle();
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    fetchInitialData();
 
     return () => {
       mounted = false;
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (timeoutId) clearTimeout(timeoutId);
       if (controller) controller.abort();
     };
-  }, [activeTab]);
+  }, []);
 
   const activeData = activeTab === "KOSPI" ? kospiData : kosdaqData;
   const activeError = activeTab === "KOSPI" ? errors.kospi : errors.kosdaq;
