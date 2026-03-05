@@ -1,57 +1,148 @@
 .investing-history-dashboard-section {
   width: 100%;
-  padding: 12px 16px 24px;
+  padding: 14px 16px 26px;
 }
 
 .investing-history-dashboard-card {
-  --control-height: 40px;
+  --control-height: 38px;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1120px;
   margin: 0 auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px 18px;
-  background: #fff;
+  border: 1px solid #dbe4ee;
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: none;
   box-sizing: border-box;
 }
 
 .investing-history-dashboard-title {
-  margin: 0 0 12px;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 700;
+  margin: 0 0 14px;
+  color: #1e3a5f;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
   line-height: 1.25;
 }
 
 .investing-history-controls {
   display: grid;
-  gap: 10px;
+  gap: 0;
+  border: 1px solid #e6edf5;
+  border-radius: 12px;
+  padding: 4px 14px 2px;
+  background: #ffffff;
 }
 
 .investing-history-control-row {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-end;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f8fafc;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid #eef3f9;
+  border-radius: 0;
+  background: transparent;
 }
 
 .investing-history-control-row.full-row {
   width: 100%;
 }
 
-.investing-history-control-row.snapshot-row {
-  align-items: center;
+.investing-history-controls .investing-history-control-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 8px;
 }
 
-.investing-history-control-row.options-row {
+.investing-history-control-row.primary-search-row {
   display: grid;
-  grid-template-columns: 96px 120px auto minmax(200px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  column-gap: 12px;
+}
+
+.investing-history-control-row.primary-search-row > .investing-history-apply-button {
+  align-self: start;
+  margin-top: 20px;
+}
+
+.investing-history-control-row.primary-search-row
+  .investing-history-control-label.full-width {
+  flex: 1;
+  width: auto;
+  min-width: 320px;
+}
+
+.investing-history-control-row.primary-snapshot-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  column-gap: 16px;
+  align-items: start;
+}
+
+.investing-history-control-row.primary-snapshot-row > * {
+  align-self: start;
+}
+
+.investing-history-control-row.quick-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 88px max-content max-content;
+  align-items: end;
+  column-gap: 8px;
+}
+
+.investing-history-control-row.quick-row > * {
+  align-self: end;
+}
+
+.investing-history-control-row.quick-row > .investing-history-advanced-toggle {
+  align-self: start;
+  margin-top: 20px;
+}
+
+.investing-history-control-row.advanced-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: end;
   column-gap: 10px;
+  row-gap: 10px;
+}
+
+.investing-history-advanced-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(130px, 1fr) minmax(130px, 1fr) minmax(180px, 1.2fr)
+    minmax(120px, 1fr) minmax(220px, 1.4fr);
+  column-gap: 8px;
+  align-items: end;
+  row-gap: 8px;
+  min-width: 0;
+  flex: 1 1 760px;
+}
+
+.investing-history-advanced-grid > * {
+  align-self: end;
+}
+
+.investing-history-inline-actions.advanced-actions {
+  align-self: start;
+  margin-top: 20px;
+  justify-content: flex-end;
+  width: auto;
+  margin-left: auto;
+  gap: 6px;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  align-items: flex-start;
+}
+
+.investing-history-control-label.quick-hops {
+  min-width: 220px;
+}
+
+.investing-history-control-label.quick-max-edges {
+  min-width: 100px;
 }
 
 .investing-history-control-row.action-row {
@@ -61,9 +152,11 @@
 .investing-history-control-label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #2c3e50;
+  gap: 5px;
+  font-size: 12px;
+  color: #334155;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .investing-history-control-label.grow {
@@ -84,12 +177,27 @@
 .investing-history-control-label input[type="number"],
 .investing-history-control-label input[list],
 .investing-history-control-label input[type="text"] {
+  box-sizing: border-box;
   height: var(--control-height);
-  border: 1px solid #cfd8dc;
-  border-radius: 8px;
-  padding: 0 10px;
+  line-height: calc(var(--control-height) - 2px);
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0 12px;
   background: #fff;
-  color: #2c3e50;
+  color: #1e293b;
+  font-size: 14px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.investing-history-control-label input[type="date"]:focus,
+.investing-history-control-label input[type="number"]:focus,
+.investing-history-control-label input[list]:focus,
+.investing-history-control-label input[type="text"]:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
 }
 
 .investing-history-control-label input[type="range"] {
@@ -104,6 +212,32 @@
 
 .investing-history-snapshot-slider-wrap input[type="range"] {
   margin-top: 4px;
+}
+
+.investing-history-control-label.snapshot-navigator-control
+  .investing-history-snapshot-slider-wrap {
+  height: var(--control-height);
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+}
+
+.investing-history-control-label.snapshot-navigator-control
+  .investing-history-snapshot-slider-wrap
+  input[type="range"] {
+  width: 100%;
+  margin-top: 0;
+}
+
+.investing-history-control-label.snapshot-navigator-control
+  .investing-history-snapshot-markers {
+  top: calc(50% - 16px);
+}
+
+.investing-history-control-label.hops-control input[type="range"] {
+  height: var(--control-height);
+  margin: 0;
+  display: block;
 }
 
 .investing-history-snapshot-markers {
@@ -134,51 +268,117 @@
 }
 
 .investing-history-control-row button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: var(--control-height);
+  line-height: 1;
   border: 0;
-  border-radius: 8px;
-  padding: 0 12px;
-  background: #34495e;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: #4a6178;
   color: #fff;
   cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+  transition:
+    transform 0.08s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.investing-history-control-row button:hover:not(:disabled) {
+  background: #3e566d;
+  box-shadow: 0 4px 10px rgba(30, 58, 95, 0.2);
+}
+
+.investing-history-control-row button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .investing-history-control-row button:disabled {
-  background: #95a5a6;
+  background: #9aa9b6;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.investing-history-reload-button {
+  background: #35516d;
+}
+
+.investing-history-apply-button {
+  background: #1d4ed8;
+}
+
+.investing-history-apply-button:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+.investing-history-clear-button {
+  background: #64748b;
+}
+
+.investing-history-reset-button {
+  background: #566b82;
+}
+
+.investing-history-advanced-toggle {
+  background: #eef2f7 !important;
+  color: #334155 !important;
+  border: 1px solid #d7e0ea !important;
+  font-weight: 600 !important;
+}
+
+.investing-history-advanced-toggle:hover:not(:disabled) {
+  background: #e2e8f0 !important;
+  box-shadow: none !important;
 }
 
 .investing-history-view-toggle {
   display: inline-flex;
-  border: 1px solid #cfd8dc;
-  border-radius: 8px;
+  border: 1px solid #d3dce6;
+  border-radius: 10px;
   overflow: hidden;
   height: var(--control-height);
+  box-sizing: border-box;
 }
 
 .investing-history-view-toggle .investing-history-view-button {
-  min-width: 62px;
+  min-width: 64px;
+  height: 100%;
   border-radius: 0;
-  background: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
   color: #334155;
   font-weight: 600;
-  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.investing-history-view-toggle .investing-history-view-button + .investing-history-view-button {
+.investing-history-view-toggle
+  .investing-history-view-button
+  + .investing-history-view-button {
   border-left: 1px solid #cfd8dc;
 }
 
 .investing-history-view-toggle .investing-history-view-button.active,
-.investing-history-view-toggle .investing-history-view-button[aria-pressed="true"] {
-  background: #1e3a5f;
+.investing-history-view-toggle
+  .investing-history-view-button[aria-pressed="true"] {
+  background: #1f3f67;
   color: #ffffff;
-  box-shadow: inset 0 0 0 1px #1e3a5f;
+  box-shadow: inset 0 0 0 1px #1f3f67;
 }
 
 .investing-history-snapshot-label {
-  font-size: 12px;
-  color: #4b5563;
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
 }
 
 .investing-history-stock-search {
@@ -197,10 +397,10 @@
   top: calc(100% + 4px);
   max-height: 360px;
   overflow: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #d7e0ea;
+  border-radius: 10px;
   background: #fff;
-  box-shadow: none;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   z-index: 20;
 }
 
@@ -230,8 +430,8 @@
 
 .investing-history-stock-suggestions .investing-history-stock-suggestion.active,
 .investing-history-stock-suggestions .investing-history-stock-suggestion:hover {
-  background: #fff;
-  color: #6b7280;
+  background: #f8fafc;
+  color: #334155;
   font-weight: 500;
 }
 
@@ -240,22 +440,98 @@
   color: #6b7280;
 }
 
+.investing-history-check-option {
+  height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  padding: 0 8px;
+  border: 1px solid #d7e0ea;
+  border-radius: 10px;
+  background: #ffffff;
+  white-space: nowrap;
+  justify-content: flex-start;
+}
+
+.investing-history-check-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.investing-history-check-option span {
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.investing-history-check-option.advanced-check-option {
+  min-width: max-content;
+  height: var(--control-height);
+  font-size: 12px;
+  padding: 0 8px;
+}
+
 .investing-history-control-label.highlight-hops-inline {
   flex: 1 1 280px;
   min-width: 240px;
 }
 
 .investing-history-control-label.view-mode-control {
-  min-width: 150px;
+  min-width: 0;
+}
+
+.investing-history-control-label.quick-view-mode {
+  min-width: auto;
+  width: max-content;
+  justify-self: start;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.investing-history-control-label.quick-view-mode
+  .investing-history-control-hint {
+  display: none;
+}
+
+.investing-history-control-label.quick-view-mode
+  .investing-history-view-toggle {
+  height: var(--control-height);
+  border-radius: 10px;
+  width: auto;
+  align-self: flex-start;
+}
+
+.investing-history-control-label.quick-view-mode
+  .investing-history-view-button {
+  min-width: 36px;
+  font-size: 12px;
+  padding: 0 8px;
+}
+
+.investing-history-control-label.advanced-filter-control {
+  min-width: 0;
+}
+
+.investing-history-advanced-filter-options {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: normal;
+  flex-wrap: wrap;
 }
 
 .investing-history-control-label.max-edges-control,
-.investing-history-control-label.db-limit-control {
+.investing-history-control-label.db-limit-control,
+.investing-history-control-label.history-limit-control {
   min-width: 0;
 }
 
 .investing-history-control-label.max-edges-control input[type="number"],
-.investing-history-control-label.db-limit-control input[type="number"] {
+.investing-history-control-label.db-limit-control input[type="number"],
+.investing-history-control-label.history-limit-control input[type="number"] {
   width: 100%;
 }
 
@@ -267,45 +543,78 @@
 
 .investing-history-inline-actions {
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
+  gap: 8px;
+  align-items: center;
   margin-left: 0;
   justify-content: flex-end;
   align-self: end;
 }
 
 .investing-history-inline-actions button {
-  min-width: 110px;
+  min-width: 88px;
 }
 
 .investing-history-inline-actions .investing-history-back-arrow-button {
-  width: 34px;
-  min-width: 34px;
+  width: 32px;
+  min-width: 32px;
   padding: 0;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: #8fa3b3;
 }
 
-.investing-history-control-row.options-row .investing-history-control-label input[type="number"],
+.investing-history-control-row.options-row
+  .investing-history-control-label
+  input[type="number"],
 .investing-history-control-row.options-row .investing-history-view-toggle,
-.investing-history-control-row.options-row .investing-history-inline-actions button,
-.investing-history-control-row.options-row .investing-history-control-label input[type="range"] {
+.investing-history-control-row.options-row
+  .investing-history-inline-actions
+  button,
+.investing-history-control-row.options-row
+  .investing-history-control-label
+  input[type="range"] {
   height: var(--control-height);
 }
 
+.investing-history-control-row.options-row.compact-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.investing-history-control-row.options-row.compact-options-row
+  .investing-history-inline-actions {
+  margin-left: auto;
+}
+
 @media (max-width: 1040px) {
-  .investing-history-control-row.options-row {
+  .investing-history-control-row.primary-search-row,
+  .investing-history-control-row.primary-snapshot-row,
+  .investing-history-control-row.quick-row {
     display: flex;
     align-items: flex-end;
     flex-wrap: wrap;
   }
 
-  .investing-history-control-label.max-edges-control,
-  .investing-history-control-label.db-limit-control {
-    min-width: 96px;
+  .investing-history-advanced-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    row-gap: 10px;
+  }
+
+  .investing-history-control-label.advanced-filter-control {
+    grid-column: 1 / -1;
+  }
+
+  .investing-history-inline-actions.advanced-actions {
+    width: 100%;
+    align-self: start;
+    margin-top: 20px;
+    margin-left: 0;
+    justify-content: flex-end;
   }
 
   .investing-history-inline-actions {
@@ -314,23 +623,49 @@
 }
 
 .investing-history-status {
-  margin: 12px 0;
+  margin: 12px 0 10px;
   min-height: 24px;
+  padding: 10px 12px;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  background: #fbfdff;
   font-size: 14px;
   color: #1f2937;
 }
 
 .investing-history-error {
-  margin-top: 4px;
+  margin-top: 6px;
   color: #b91c1c;
+  font-weight: 700;
+}
+
+.investing-history-summary-chips {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.investing-history-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid #d6e0eb;
+  border-radius: 999px;
+  background: #f6f9fc;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .investing-history-table-wrap {
-  margin: 8px 0 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  margin: 10px 0 14px;
+  border: 1px solid #dde6f0;
+  border-radius: 10px;
   overflow: auto;
   max-height: 360px;
+  background: #ffffff;
 }
 
 .investing-history-table {
@@ -342,11 +677,11 @@
 .investing-history-table thead th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: #f7fbff;
   color: #111827;
   font-weight: 700;
   text-align: left;
-  border-bottom: 1px solid #d1d5db;
+  border-bottom: 1px solid #d9e2ec;
   padding: 8px 10px;
   white-space: nowrap;
 }
@@ -365,8 +700,28 @@
   color: #4b5563;
 }
 
+.investing-history-subtitle {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 12px 9px;
+  border-bottom: 1px solid #d9e2ec;
+  background: #f7fbff;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.investing-history-table-wrap.top-edges-wrap {
+  max-height: 300px;
+}
+
 .investing-history-plot-wrap {
-  margin-top: 8px;
+  margin-top: 10px;
+  border: 1px solid #dde6f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
 }
 
 @media (max-width: 767px) {
@@ -376,10 +731,20 @@
 
   .investing-history-dashboard-card {
     padding: 12px 10px 14px;
+    border-radius: 12px;
   }
 
   .investing-history-dashboard-title {
     font-size: 16px;
+  }
+
+  .investing-history-controls {
+    padding: 2px 10px 2px;
+  }
+
+  .investing-history-control-row {
+    gap: 8px;
+    padding: 10px 0;
   }
 
   .investing-history-control-label {
@@ -390,9 +755,54 @@
     min-width: 100%;
   }
 
+  .investing-history-control-row.primary-search-row button,
+  .investing-history-control-row.quick-row button {
+    width: 100%;
+  }
+
+  .investing-history-control-row.quick-row {
+    gap: 10px;
+  }
+
+  .investing-history-control-label.quick-hops,
+  .investing-history-control-label.quick-max-edges,
+  .investing-history-control-label.view-mode-control {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .investing-history-advanced-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
   .investing-history-inline-actions {
     width: 100%;
     margin-left: 0;
     justify-content: flex-end;
+  }
+
+  .investing-history-check-option {
+    height: 34px;
+    font-size: 12px;
+  }
+
+  .investing-history-check-option.advanced-check-option {
+    min-width: 100%;
+    height: 34px;
+  }
+
+  .investing-history-advanced-filter-options {
+    height: auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .investing-history-status {
+    font-size: 13px;
+    padding: 9px 10px;
   }
 }

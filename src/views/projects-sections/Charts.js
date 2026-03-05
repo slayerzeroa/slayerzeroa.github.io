@@ -506,7 +506,7 @@ function Charts() {
       <div
         style={{
           width: "100%",
-          maxWidth: "1000px",
+          maxWidth: "1120px",
           margin: "0 auto",
           border: "1px solid #e5e7eb",
           borderRadius: "10px",

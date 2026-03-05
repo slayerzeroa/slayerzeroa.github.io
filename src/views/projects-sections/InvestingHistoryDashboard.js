@@ -4,6 +4,7 @@ import "./InvestingHistoryDashboard.css";
 
 const SYSTEM_MAX_EDGES = 50;
 const SYSTEM_MAX_DB_LIMIT = 20000;
+const SYSTEM_MAX_HISTORY_LIMIT = 5000;
 const STOCK_OPTIONS_LIMIT = 5000;
 const STOCK_SEARCH_DEBOUNCE_MS = 180;
 const STOCK_FUZZY_MATCH_THRESHOLD = 0.8;
@@ -19,7 +20,9 @@ const SNAPSHOT_SLIDER_MIN_DATE = "2000-01-01";
 const SNAPSHOT_SLIDER_MAX_DATE = "2026-02-18";
 const SNAPSHOT_RANGE_START = SNAPSHOT_SLIDER_MIN_DATE;
 const SNAPSHOT_RANGE_END = SNAPSHOT_SLIDER_MAX_DATE;
+const DEFAULT_QUERY_START_DATE = "2015-01-01";
 const DEFAULT_INITIAL_STOCK = "삼성전자";
+const DEFAULT_HISTORY_LIMIT = 500;
 const CLIENT_HOP_QUERY_BUDGET = 30;
 const CLIENT_HOP_LEVEL_LIMIT = 20;
 const GRAPH_API_BASE_URL = (
@@ -193,6 +196,52 @@ function buildApiUrl(path) {
   return `${base}${normalizedPath}`;
 }
 
+function compactParams(input) {
+  const out = {};
+  Object.entries(input || {}).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (typeof value === "string" && value.trim() === "") {
+      return;
+    }
+    out[key] = value;
+  });
+  return out;
+}
+
+function toQueryString(params) {
+  const usp = new URLSearchParams();
+  Object.entries(compactParams(params)).forEach(([key, value]) => {
+    usp.append(key, `${value}`);
+  });
+  return usp.toString();
+}
+
+async function requestJson(path, options = {}) {
+  const res = await fetch(buildApiUrl(path), options);
+  const raw = await res.text();
+
+  let data = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch (_error) {
+      data = null;
+    }
+  }
+
+  if (!res.ok) {
+    const detail =
+      (data && typeof data === "object" && (data.detail || data.message || data.error)) ||
+      raw ||
+      `HTTP ${res.status}`;
+    throw new Error(String(detail));
+  }
+
+  return data ?? {};
+}
+
 function createTimedRequestSignal(timeoutMs, externalSignal = null) {
   const controller = new AbortController();
   const timerId = setTimeout(() => controller.abort(), timeoutMs);
@@ -241,6 +290,47 @@ function extractHistoryRows(payload) {
 
   for (const key of HISTORY_KEYS) {
     const rows = normalizeRows(payload[key]);
+    if (rows.length) {
+      return rows;
+    }
+  }
+
+  return [];
+}
+
+function extractTopEdges(payload) {
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const candidates = [
+    payload.top_edges,
+    payload.topEdges,
+    payload.edges_top,
+    payload.top_edges_rows,
+  ];
+
+  for (const rawRows of candidates) {
+    if (!Array.isArray(rawRows)) {
+      continue;
+    }
+
+    const rows = rawRows
+      .map((row) => {
+        const src = normalizeCompanyName(row?.src || row?.source || row?.investor);
+        const dst = normalizeCompanyName(row?.dst || row?.target || row?.investee);
+        const weight = Number(row?.weight ?? row?.value ?? row?.holding_amount);
+        if (!src || !dst) {
+          return null;
+        }
+        return {
+          src,
+          dst,
+          weight: Number.isFinite(weight) ? weight : 0,
+        };
+      })
+      .filter(Boolean);
+
     if (rows.length) {
       return rows;
     }
@@ -331,6 +421,16 @@ function formatCellValue(value, columnName = "") {
   return String(value);
 }
 
+function formatNumberValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "-";
+  }
+  return numeric.toLocaleString("en-US", {
+    maximumFractionDigits: 0,
+  });
+}
+
 function buildStockList(stocks) {
   if (!Array.isArray(stocks)) {
     return [];
@@ -376,20 +476,72 @@ function normalizeTraceLabel(trace) {
   }
 
   const normalizedTrace = { ...trace };
+  const isMarkerTrace = String(normalizedTrace.mode || "").includes("markers");
+
+  const toRawString = (value) => {
+    if (value === null || value === undefined) {
+      return "";
+    }
+    if (typeof value === "string") {
+      return value.trim();
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    return "";
+  };
 
   if (typeof normalizedTrace.name === "string") {
     normalizedTrace.name = normalizeCompanyName(normalizedTrace.name);
   }
 
+  let originalTextList = [];
   if (Array.isArray(normalizedTrace.text)) {
-    normalizedTrace.text = normalizedTrace.text.map((item) => {
-      if (typeof item !== "string") {
-        return item;
+    originalTextList = normalizedTrace.text.map((item) => toRawString(item));
+    normalizedTrace.text = originalTextList.map((item, index) => {
+      if (!item && typeof normalizedTrace.text[index] !== "string") {
+        return normalizedTrace.text[index];
       }
       return normalizeCompanyName(item);
     });
   } else if (typeof normalizedTrace.text === "string") {
+    originalTextList = [normalizedTrace.text];
     normalizedTrace.text = normalizeCompanyName(normalizedTrace.text);
+  }
+
+  if (isMarkerTrace && originalTextList.length) {
+    const fullNames = originalTextList.map((item, index) => {
+      const fallback = Array.isArray(normalizedTrace.text)
+        ? toRawString(normalizedTrace.text[index])
+        : toRawString(normalizedTrace.text);
+      return item || fallback;
+    });
+
+    if (Array.isArray(normalizedTrace.hovertext) && normalizedTrace.hovertext.length) {
+      normalizedTrace.hovertext = normalizedTrace.hovertext.map((item, index) => {
+        const detail = toRawString(item);
+        const fullName = toRawString(fullNames[index]);
+        if (!detail) {
+          return `Full Name: ${fullName}`;
+        }
+        if (detail.toLowerCase().includes("full name:")) {
+          return detail;
+        }
+        return `Full Name: ${fullName}<br>${detail}`;
+      });
+      normalizedTrace.hovertemplate = "%{hovertext}<extra></extra>";
+    } else {
+      normalizedTrace.hovertext = Array.isArray(normalizedTrace.text)
+        ? fullNames
+        : fullNames[0] || "";
+      if (normalizedTrace.customdata !== undefined) {
+        normalizedTrace.hovertemplate =
+          "Full Name: %{hovertext}<br>Name: %{text}<br>Role: %{customdata}<extra></extra>";
+      } else {
+        normalizedTrace.hovertemplate =
+          "Full Name: %{hovertext}<br>Name: %{text}<extra></extra>";
+      }
+    }
   }
 
   return normalizedTrace;
@@ -932,7 +1084,8 @@ function extractNodePointsFromFigureData(traces) {
     const len = Math.min(xs.length, ys.length, texts.length);
 
     for (let i = 0; i < len; i += 1) {
-      const label = normalizeCompanyName(texts[i]);
+      const fullLabel = String(texts[i] ?? "").trim();
+      const label = normalizeCompanyName(fullLabel);
       const key = toComparableCompanyKey(label);
       const x = Number(xs[i]);
       const y = Number(ys[i]);
@@ -940,7 +1093,14 @@ function extractNodePointsFromFigureData(traces) {
       if (!key || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
         continue;
       }
-      nodes.set(key, { key, label, x, y, z });
+      nodes.set(key, {
+        key,
+        label,
+        fullLabel: fullLabel || label,
+        x,
+        y,
+        z,
+      });
     }
   });
 
@@ -1010,6 +1170,7 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
   const nodeZ = [];
   const nodeText = [];
   const nodeCustomData = [];
+  const nodeHoverText = [];
   const nodeColors = [];
 
   const resolveRoleAgainstRoot = (nodeKey) => {
@@ -1063,6 +1224,7 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
     nodeZ.push(node.z);
     nodeText.push(node.label);
     nodeCustomData.push(role);
+    nodeHoverText.push(node.fullLabel || node.label);
     nodeColors.push(roleColor(role));
   });
 
@@ -1102,7 +1264,9 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
     z: nodeZ,
     text: nodeText,
     customdata: nodeCustomData,
-    hovertemplate: "%{text}<br>Role: %{customdata}<extra></extra>",
+    hovertext: nodeHoverText,
+    hovertemplate:
+      "Full Name: %{hovertext}<br>Name: %{text}<br>Role: %{customdata}<extra></extra>",
   };
 
   return {
@@ -1124,7 +1288,8 @@ function convert3DTraceTo2D(trace) {
 }
 
 async function postGraphQuery(payload) {
-  const cacheKey = JSON.stringify(payload || {});
+  const safePayload = compactParams(payload || {});
+  const cacheKey = JSON.stringify(safePayload);
   const cached = graphQueryCache.get(cacheKey);
   if (cached !== null) {
     return cached;
@@ -1139,19 +1304,12 @@ async function postGraphQuery(payload) {
     const { signal, cleanup } = createTimedRequestSignal(GRAPH_QUERY_TIMEOUT_MS);
 
     try {
-      const res = await fetch(buildApiUrl("/api/graph/query"), {
+      const data = await requestJson("/api/graph/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(safePayload),
         signal,
       });
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
       graphQueryCache.set(cacheKey, data);
       return data;
     } catch (error) {
@@ -1173,17 +1331,8 @@ async function postGraphQuery(payload) {
 }
 
 async function fetchStockOptions(params, signal) {
-  const normalizedEntries = Object.entries(params || {})
-    .filter(([_key, value]) => value !== undefined && value !== null && `${value}` !== "")
-    .map(([key, value]) => [key, `${value}`])
-    .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
-
-  const usp = new URLSearchParams();
-  normalizedEntries.forEach(([key, value]) => {
-    usp.append(key, value);
-  });
-
-  const cacheKey = usp.toString();
+  const queryString = toQueryString(params);
+  const cacheKey = queryString;
   const cached = stockQueryCache.get(cacheKey);
   if (cached !== null) {
     return cached;
@@ -1192,16 +1341,10 @@ async function fetchStockOptions(params, signal) {
   const timed = createTimedRequestSignal(STOCK_QUERY_TIMEOUT_MS, signal);
 
   try {
-    const res = await fetch(buildApiUrl(`/api/stocks?${usp.toString()}`), {
+    const path = queryString ? `/api/stocks?${queryString}` : "/api/stocks";
+    const data = await requestJson(path, {
       signal: timed.signal,
     });
-
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `HTTP ${res.status}`);
-    }
-
-    const data = await res.json();
     stockQueryCache.set(cacheKey, data);
     return data;
   } catch (error) {
@@ -1214,12 +1357,22 @@ async function fetchStockOptions(params, signal) {
   }
 }
 
-async function fetchSnapshotDatesForStock(searchStock) {
+async function fetchSnapshotDatesForStock({
+  searchStock,
+  startDate,
+  endDate,
+  includePeriodicStatus,
+  includeMajorstockStatus,
+}) {
   const normalizedSearchStock = String(searchStock || "").trim();
+  const normalizedStartDate = String(startDate || SNAPSHOT_RANGE_START).trim();
+  const normalizedEndDate = String(endDate || SNAPSHOT_RANGE_END).trim();
   const cacheKey = JSON.stringify({
-    start_date: SNAPSHOT_RANGE_START,
-    end_date: SNAPSHOT_RANGE_END,
+    start_date: normalizedStartDate,
+    end_date: normalizedEndDate,
     search_stock: normalizedSearchStock,
+    include_periodic_status: Boolean(includePeriodicStatus),
+    include_majorstock_status: Boolean(includeMajorstockStatus),
   });
   const cached = snapshotDateCache.get(cacheKey);
   if (cached !== null) {
@@ -1227,10 +1380,12 @@ async function fetchSnapshotDatesForStock(searchStock) {
   }
 
   const payload = {
-    start_date: SNAPSHOT_RANGE_START,
-    end_date: SNAPSHOT_RANGE_END,
+    start_date: normalizedStartDate,
+    end_date: normalizedEndDate,
     snapshot_date: null,
     search_stock: normalizedSearchStock || null,
+    include_periodic_status: Boolean(includePeriodicStatus),
+    include_majorstock_status: Boolean(includeMajorstockStatus),
     highlight_hops: 0,
     max_edges: 1,
     db_limit: 1,
@@ -1242,7 +1397,12 @@ async function fetchSnapshotDatesForStock(searchStock) {
 }
 
 function InvestingHistoryDashboard() {
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200,
+  );
   const [snapshotDate, setSnapshotDate] = useState(SNAPSHOT_SLIDER_MAX_DATE);
+  const [startDate, setStartDate] = useState(DEFAULT_QUERY_START_DATE);
+  const [endDate, setEndDate] = useState(SNAPSHOT_SLIDER_MAX_DATE);
   const [snapshotDates, setSnapshotDates] = useState([]);
   const [stockSnapshotDates, setStockSnapshotDates] = useState([]);
   const [snapshotSliderOffset, setSnapshotSliderOffset] = useState(
@@ -1254,11 +1414,15 @@ function InvestingHistoryDashboard() {
   const [highlightHops, setHighlightHops] = useState(1);
   const [maxEdges, setMaxEdges] = useState(SYSTEM_MAX_EDGES);
   const [dbLimit, setDbLimit] = useState("");
+  const [historyLimit, setHistoryLimit] = useState(DEFAULT_HISTORY_LIMIT);
+  const [includePeriodicStatus, setIncludePeriodicStatus] = useState(false);
+  const [includeMajorstockStatus, setIncludeMajorstockStatus] = useState(false);
 
   const [figure, setFigure] = useState({ data: [], layout: {} });
   const [resolvedSnapshotDate, setResolvedSnapshotDate] = useState("");
 
   const [historyRows, setHistoryRows] = useState([]);
+  const [topEdges, setTopEdges] = useState([]);
   const [statusText, setStatusText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -1266,6 +1430,7 @@ function InvestingHistoryDashboard() {
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
   const [stockSearchLoading, setStockSearchLoading] = useState(false);
   const [stockHighlightIndex, setStockHighlightIndex] = useState(-1);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [stockNavigation, setStockNavigation] = useState({
     entries: [],
     index: -1,
@@ -1273,6 +1438,7 @@ function InvestingHistoryDashboard() {
   const stockAbortRef = useRef(null);
   const stockFetchSeqRef = useRef(0);
   const stockBlurTimerRef = useRef(null);
+  const isMobileViewport = viewportWidth <= 767;
 
   const historyColumns = useMemo(() => {
     if (!historyRows.length) {
@@ -1284,6 +1450,28 @@ function InvestingHistoryDashboard() {
     });
     return Array.from(seen);
   }, [historyRows]);
+
+  const summaryRows = useMemo(() => {
+    const match = String(statusText || "").match(/Rows:\s*([0-9,]+)/i);
+    if (match && match[1]) {
+      const parsed = Number(match[1].replace(/,/g, ""));
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return historyRows.length;
+  }, [historyRows.length, statusText]);
+
+  const summaryEdges = useMemo(() => {
+    const match = String(statusText || "").match(/Edges shown:\s*([0-9,]+)/i);
+    if (match && match[1]) {
+      const parsed = Number(match[1].replace(/,/g, ""));
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return topEdges.length;
+  }, [statusText, topEdges.length]);
 
   const stockSuggestions = useMemo(() => allStocks, [allStocks]);
   const stockSuggestionByKey = useMemo(() => {
@@ -1485,18 +1673,102 @@ function InvestingHistoryDashboard() {
   const plotData = useMemo(() => {
     const rawData = Array.isArray(figure.data) ? figure.data : [];
     const normalizedData = rawData.map(normalizeTraceLabel);
-    if (viewMode === "3d") {
-      return normalizedData;
+    const convertedData = viewMode === "3d"
+      ? normalizedData
+      : normalizedData.map(convert3DTraceTo2D);
+
+    if (!isMobileViewport) {
+      return convertedData;
     }
-    return normalizedData.map(convert3DTraceTo2D);
-  }, [figure.data, viewMode]);
+
+    const mobileTextSize = viewMode === "3d" ? 9 : 8;
+    return convertedData.map((trace) => {
+      const mode = String(trace?.mode || "");
+      if (!mode.includes("text")) {
+        return trace;
+      }
+      const currentSize = Number(trace?.textfont?.size);
+      const nextSize = Number.isFinite(currentSize)
+        ? Math.min(currentSize, mobileTextSize)
+        : mobileTextSize;
+      return {
+        ...trace,
+        textfont: {
+          ...(trace?.textfont || {}),
+          size: nextSize,
+        },
+      };
+    });
+  }, [figure.data, isMobileViewport, viewMode]);
 
   const plotLayout = useMemo(() => {
-    const baseLayout = {
+    const rawLayout = {
       ...(figure.layout || {}),
+    };
+    const rawLegend = {
+      ...(rawLayout.legend || {}),
+    };
+    const rawMargin = {
+      ...(rawLayout.margin || {}),
+    };
+    const mobileLegend = isMobileViewport
+      ? {
+          ...rawLegend,
+          orientation: "h",
+          x: 0,
+          xanchor: "left",
+          y: -0.18,
+          yanchor: "top",
+          bgcolor: "rgba(255, 255, 255, 0.88)",
+          bordercolor: "#dbe4ee",
+          borderwidth: 1,
+          font: {
+            ...(rawLegend.font || {}),
+            size: 11,
+          },
+        }
+      : rawLegend;
+    const mobileTitle = isMobileViewport
+      ? (typeof rawLayout.title === "string"
+          ? {
+              text: rawLayout.title,
+              x: 0.5,
+              xanchor: "center",
+              y: 0.99,
+              yanchor: "top",
+              font: { size: 12 },
+            }
+          : rawLayout.title && typeof rawLayout.title === "object"
+            ? {
+                ...rawLayout.title,
+                x: rawLayout.title.x ?? 0.5,
+                xanchor: rawLayout.title.xanchor || "center",
+                y: rawLayout.title.y ?? 0.99,
+                yanchor: rawLayout.title.yanchor || "top",
+                font: {
+                  ...(rawLayout.title.font || {}),
+                  size: Math.min(Number(rawLayout.title.font?.size) || 14, 12),
+                },
+              }
+            : rawLayout.title)
+      : rawLayout.title;
+    const mobileMargin = isMobileViewport
+      ? {
+          ...rawMargin,
+          t: Math.max(Number(rawMargin.t) || 0, 100),
+          r: Math.max(Number(rawMargin.r) || 0, 8),
+          b: Math.max(Number(rawMargin.b) || 0, 96),
+        }
+      : rawMargin;
+
+    const baseLayout = {
+      ...rawLayout,
       autosize: true,
       paper_bgcolor: "#ffffff",
       plot_bgcolor: "#ffffff",
+      title: mobileTitle,
+      legend: mobileLegend,
+      margin: mobileMargin,
     };
 
     if (viewMode === "3d") {
@@ -1601,7 +1873,7 @@ function InvestingHistoryDashboard() {
       },
       hovermode: restLayout.hovermode || "closest",
     };
-  }, [figure.layout, plotData, searchStock, searchStockQuery, viewMode]);
+  }, [figure.layout, isMobileViewport, plotData, searchStock, searchStockQuery, viewMode]);
 
   const plotConfig = useMemo(
     () => ({
@@ -1631,6 +1903,12 @@ function InvestingHistoryDashboard() {
       );
       const requestedSearchLabel = options.searchStockLabel ?? searchStock;
       const requestedSearchQuery = options.searchStockQuery ?? searchStockQuery;
+      const effectiveStartDate = startDate && endDate && startDate > endDate
+        ? endDate
+        : startDate;
+      const effectiveEndDate = startDate && endDate && endDate < startDate
+        ? startDate
+        : endDate;
       const typedSearch = requestedSearchLabel.trim();
       const matchedStock = findMatchedStock(typedSearch);
       const searchStockForQuery =
@@ -1646,7 +1924,13 @@ function InvestingHistoryDashboard() {
       ).trim();
       const stockSnapshotDates = searchStockForQuery
         ? normalizeSnapshotDateList(
-            await fetchSnapshotDatesForStock(searchStockForQuery).catch(() => []),
+            await fetchSnapshotDatesForStock({
+              searchStock: searchStockForQuery,
+              startDate: effectiveStartDate,
+              endDate: effectiveEndDate,
+              includePeriodicStatus,
+              includeMajorstockStatus,
+            }).catch(() => []),
           )
         : [];
       const snapshotDatesForQuery = stockSnapshotDates.length
@@ -1720,14 +2004,21 @@ function InvestingHistoryDashboard() {
       const effectiveDbLimit = dbLimit
         ? Math.max(1, Math.min(Number(dbLimit), SYSTEM_MAX_DB_LIMIT))
         : null;
+      const effectiveHistoryLimit = Math.max(
+        1,
+        Math.min(Number(historyLimit || DEFAULT_HISTORY_LIMIT), SYSTEM_MAX_HISTORY_LIMIT),
+      );
       const payload = {
-        start_date: SNAPSHOT_RANGE_START,
-        end_date: SNAPSHOT_RANGE_END,
+        start_date: effectiveStartDate || SNAPSHOT_RANGE_START,
+        end_date: effectiveEndDate || SNAPSHOT_RANGE_END,
         snapshot_date: effectiveSnapshotDate,
         search_stock: searchStockForQuery || null,
+        include_periodic_status: Boolean(includePeriodicStatus),
+        include_majorstock_status: Boolean(includeMajorstockStatus),
         highlight_hops: requestedHopDepth,
         max_edges: effectiveMaxEdges,
         db_limit: effectiveDbLimit,
+        history_limit: effectiveHistoryLimit,
       };
 
       const applyGraphState = (
@@ -1735,6 +2026,7 @@ function InvestingHistoryDashboard() {
         figureOverride = null,
         statusOverride = "",
         stockDatesOverride = [],
+        topEdgesOverride = null,
       ) => {
         const dates = normalizeSnapshotDateList(data.snapshot_dates);
         const fallbackSnapshotDate = resolveSnapshotDateForSelectedDate(
@@ -1750,6 +2042,7 @@ function InvestingHistoryDashboard() {
 
         setFigure(figureOverride || data.figure || { data: [], layout: {} });
         setHistoryRows(extractHistoryRows(data));
+        setTopEdges(Array.isArray(topEdgesOverride) ? topEdgesOverride : extractTopEdges(data));
         setStatusText(statusOverride || data.status_text || "");
         setResolvedSnapshotDate(serverSnapshotDate);
         setSnapshotDates(dates);
@@ -1767,12 +2060,14 @@ function InvestingHistoryDashboard() {
         figureOverride = null,
         statusOverride = "",
         stockDatesOverride = [],
+        topEdgesOverride = null,
       ) => {
         const trackedSnapshotDate = applyGraphState(
           data,
           figureOverride,
           statusOverride,
           stockDatesOverride,
+          topEdgesOverride,
         );
         if (shouldRecordNavigation && resolvedSearchLabel) {
           recordStockNavigation(
@@ -1916,6 +2211,14 @@ function InvestingHistoryDashboard() {
           const expansionSuffix = truncated
             ? " | Expanded hops (client, truncated)"
             : " | Expanded hops (client)";
+          const topEdgesRows = Array.from(aggregatedEdges.values())
+            .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))
+            .slice(0, 20)
+            .map((edge) => ({
+              src: edge.srcLabel,
+              dst: edge.dstLabel,
+              weight: Number(edge.weight || 0),
+            }));
           const expandedStatus = `${baseData.status_text || ""} | Edges shown: ${
             aggregatedEdges.size
           }${expansionSuffix}`;
@@ -1924,12 +2227,14 @@ function InvestingHistoryDashboard() {
             expandedFigure,
             expandedStatus,
             stockSnapshotDates,
+            topEdgesRows,
           );
         }
       }
     } catch (loadError) {
       setError(loadError.message || "Graph query failed.");
       setHistoryRows([]);
+      setTopEdges([]);
     } finally {
       setLoading(false);
     }
@@ -1946,10 +2251,19 @@ function InvestingHistoryDashboard() {
     stockFetchSeqRef.current = fetchId;
     setStockSearchLoading(true);
 
+    const effectiveStartDate = startDate && endDate && startDate > endDate
+      ? endDate
+      : startDate;
+    const effectiveEndDate = startDate && endDate && endDate < startDate
+      ? startDate
+      : endDate;
+
     try {
       const data = await fetchStockOptions({
-        start_date: SNAPSHOT_RANGE_START,
-        end_date: SNAPSHOT_RANGE_END,
+        start_date: effectiveStartDate || SNAPSHOT_RANGE_START,
+        end_date: effectiveEndDate || SNAPSHOT_RANGE_END,
+        include_periodic_status: Boolean(includePeriodicStatus),
+        include_majorstock_status: Boolean(includeMajorstockStatus),
         q: undefined,
         limit: STOCK_OPTIONS_LIMIT,
       }, controller.signal);
@@ -1997,6 +2311,14 @@ function InvestingHistoryDashboard() {
   }, [stockSearchOpen, allStocks.length]);
 
   useEffect(() => {
+    const onResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (stockAbortRef.current) {
         stockAbortRef.current.abort();
@@ -2008,7 +2330,19 @@ function InvestingHistoryDashboard() {
   }, []);
 
   const onRangeReload = async () => {
+    await loadAllStocks();
     await loadGraph();
+  };
+
+  const onReset = async () => {
+    setSearchStock("");
+    setSearchStockQuery("");
+    closeStockDropdown();
+    await loadAllStocks();
+    await loadGraph({
+      searchStockLabel: "",
+      searchStockQuery: "",
+    });
   };
 
   const onSnapshotChange = (nextOffset) => {
@@ -2173,9 +2507,9 @@ function InvestingHistoryDashboard() {
         </h2>
 
         <div className="investing-history-controls">
-          <div className="investing-history-control-row full-row">
+          <div className="investing-history-control-row full-row primary-search-row">
             <label className="investing-history-control-label full-width">
-              Search / Stock List
+              Search Stock
               <div className="investing-history-stock-search">
                 <input
                   type="text"
@@ -2233,11 +2567,19 @@ function InvestingHistoryDashboard() {
                 )}
               </div>
             </label>
+            <button
+              className="investing-history-apply-button"
+              onClick={onRangeReload}
+              disabled={loading}
+              type="button"
+            >
+              Apply Search
+            </button>
           </div>
 
-          <div className="investing-history-control-row full-row snapshot-row">
-            <label className="investing-history-control-label grow">
-              Snapshot Date Navigator
+          <div className="investing-history-control-row full-row primary-snapshot-row">
+            <label className="investing-history-control-label grow snapshot-navigator-control">
+              Snapshot Navigator
               <div className="investing-history-snapshot-slider-wrap">
                 <div className="investing-history-snapshot-markers" aria-hidden="true">
                   {snapshotMarkers.map((marker) => (
@@ -2261,8 +2603,7 @@ function InvestingHistoryDashboard() {
                 />
               </div>
               <div className="investing-history-snapshot-label">
-                Selected Date: {snapshotDate || "No snapshot"} | Snapshot:{" "}
-                {resolvedSnapshotDate || mappedSnapshotDate || "No snapshot"}
+                As-Of Snapshot Date: {resolvedSnapshotDate || mappedSnapshotDate || "No snapshot"}
               </div>
             </label>
             <label className="investing-history-control-label snapshot-date-picker">
@@ -2277,8 +2618,19 @@ function InvestingHistoryDashboard() {
             </label>
           </div>
 
-          <div className="investing-history-control-row full-row options-row">
-            <label className="investing-history-control-label max-edges-control">
+          <div className="investing-history-control-row full-row quick-row">
+            <label className="investing-history-control-label highlight-hops-inline quick-hops hops-control">
+              Highlight Hops: {highlightHops}
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={1}
+                value={highlightHops}
+                onChange={(event) => setHighlightHops(Number(event.target.value))}
+              />
+            </label>
+            <label className="investing-history-control-label max-edges-control quick-max-edges">
               Max Edges
               <input
                 type="number"
@@ -2298,34 +2650,11 @@ function InvestingHistoryDashboard() {
                 }
               />
             </label>
-            <label className="investing-history-control-label db-limit-control">
-              DB Limit
-              <input
-                type="number"
-                min={1}
-                max={SYSTEM_MAX_DB_LIMIT}
-                placeholder="optional"
-                value={dbLimit}
-                onChange={(event) => {
-                  const raw = event.target.value;
-                  if (raw === "") {
-                    setDbLimit("");
-                    return;
-                  }
-
-                  const clamped = Math.max(
-                    1,
-                    Math.min(Number(raw), SYSTEM_MAX_DB_LIMIT),
-                  );
-                  if (Number.isFinite(clamped)) {
-                    setDbLimit(String(clamped));
-                  }
-                }}
-              />
-            </label>
-            <label className="investing-history-control-label view-mode-control">
-              <span className="investing-history-control-hint">Graph View Mode</span>
-              <div className="investing-history-view-toggle">
+            <label
+              className="investing-history-control-label view-mode-control quick-view-mode"
+              aria-label="Graph View Mode"
+            >
+              <div className="investing-history-view-toggle" role="group" aria-label="Graph View Mode">
                 <button
                   type="button"
                   className={`investing-history-view-button ${
@@ -2348,54 +2677,157 @@ function InvestingHistoryDashboard() {
                 </button>
               </div>
             </label>
-            <label className="investing-history-control-label highlight-hops-inline">
-              Highlight Hops: {highlightHops}
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={1}
-                value={highlightHops}
-                onChange={(event) => setHighlightHops(Number(event.target.value))}
-              />
-            </label>
-            <div className="investing-history-inline-actions">
-              <button
-                className="investing-history-back-arrow-button"
-                onClick={onGoBack}
-                disabled={!canGoBack || loading}
-                type="button"
-                aria-label="Go back"
-                title="Go back"
-              >
-                {"\u2190"}
-              </button>
-              <button
-                onClick={() => {
-                  setSearchStock("");
-                  setSearchStockQuery("");
-                }}
-                disabled={!searchStock || loading}
-                type="button"
-              >
-                Clear Search
-              </button>
-              <button onClick={onRangeReload} disabled={loading} type="button">
-                Apply Search
-              </button>
-            </div>
+            <button
+              type="button"
+              className="investing-history-advanced-toggle"
+              onClick={() => setAdvancedOpen((prev) => !prev)}
+            >
+              {advancedOpen ? "Hide Advanced" : "Show Advanced"}
+            </button>
           </div>
+
+          {advancedOpen ? (
+            <div className="investing-history-control-row full-row advanced-row">
+              <div className="investing-history-advanced-grid">
+                <label className="investing-history-control-label">
+                  Start Date
+                  <input
+                    type="date"
+                    value={startDate || ""}
+                    min={SNAPSHOT_SLIDER_MIN_DATE}
+                    max={SNAPSHOT_SLIDER_MAX_DATE}
+                    onChange={(event) => {
+                      const nextDate = clampToSliderDateRange(event.target.value);
+                      setStartDate(nextDate);
+                      if (endDate && nextDate > endDate) {
+                        setEndDate(nextDate);
+                      }
+                    }}
+                  />
+                </label>
+                <label className="investing-history-control-label">
+                  End Date
+                  <input
+                    type="date"
+                    value={endDate || ""}
+                    min={SNAPSHOT_SLIDER_MIN_DATE}
+                    max={SNAPSHOT_SLIDER_MAX_DATE}
+                    onChange={(event) => {
+                      const nextDate = clampToSliderDateRange(event.target.value);
+                      setEndDate(nextDate);
+                      if (startDate && nextDate < startDate) {
+                        setStartDate(nextDate);
+                      }
+                    }}
+                  />
+                </label>
+                <label className="investing-history-control-label db-limit-control">
+                  DB Limit
+                  <input
+                    type="number"
+                    min={1}
+                    max={SYSTEM_MAX_DB_LIMIT}
+                    placeholder="optional"
+                    value={dbLimit}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      if (raw === "") {
+                        setDbLimit("");
+                        return;
+                      }
+
+                      const clamped = Math.max(
+                        1,
+                        Math.min(Number(raw), SYSTEM_MAX_DB_LIMIT),
+                      );
+                      if (Number.isFinite(clamped)) {
+                        setDbLimit(String(clamped));
+                      }
+                    }}
+                  />
+                </label>
+                <label className="investing-history-control-label history-limit-control">
+                  History Limit
+                  <input
+                    type="number"
+                    min={1}
+                    max={SYSTEM_MAX_HISTORY_LIMIT}
+                    value={historyLimit}
+                    onChange={(event) =>
+                      setHistoryLimit(
+                        Math.max(
+                          1,
+                          Math.min(
+                            Number(event.target.value || DEFAULT_HISTORY_LIMIT),
+                            SYSTEM_MAX_HISTORY_LIMIT,
+                          ),
+                        ),
+                      )
+                    }
+                  />
+                </label>
+                <div className="investing-history-control-label advanced-filter-control">
+                  Filters
+                  <div className="investing-history-advanced-filter-options">
+                    <label className="investing-history-check-option advanced-check-option">
+                      <input
+                        type="checkbox"
+                        checked={includePeriodicStatus}
+                        onChange={(event) => setIncludePeriodicStatus(event.target.checked)}
+                      />
+                      <span>Periodic</span>
+                    </label>
+                    <label className="investing-history-check-option advanced-check-option">
+                      <input
+                        type="checkbox"
+                        checked={includeMajorstockStatus}
+                        onChange={(event) => setIncludeMajorstockStatus(event.target.checked)}
+                      />
+                      <span>Majorstock</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="investing-history-inline-actions advanced-actions">
+                <button
+                  className="investing-history-back-arrow-button"
+                  onClick={onGoBack}
+                  disabled={!canGoBack || loading}
+                  type="button"
+                  aria-label="Go back"
+                  title="Go back"
+                >
+                  {"\u2190"}
+                </button>
+                <button
+                  onClick={onReset}
+                  className="investing-history-reset-button"
+                  disabled={loading}
+                  type="button"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="investing-history-status">
           {loading ? "Loading..." : statusText}
           {error ? <div className="investing-history-error">{error}</div> : null}
           <div className="investing-history-snapshot-label">
-            Snapshot Date: {snapshotDate || "None"} | Server Snapshot:{" "}
-            {resolvedSnapshotDate || snapshotDate || "None"}
+            As-Of Snapshot Date: {resolvedSnapshotDate || mappedSnapshotDate || "None"}
           </div>
-          <div className="investing-history-snapshot-label">
-            Selected Stock: {searchStock || "None"}
+          <div className="investing-history-summary-chips">
+            <span className="investing-history-summary-chip">
+              Selected: {normalizeCompanyName(searchStock) || "None"}
+            </span>
+            <span className="investing-history-summary-chip">
+              Rows: {formatNumberValue(summaryRows)}
+            </span>
+            <span className="investing-history-summary-chip">
+              Edges: {formatNumberValue(summaryEdges)}
+            </span>
           </div>
         </div>
 
@@ -2425,6 +2857,32 @@ function InvestingHistoryDashboard() {
             <div className="investing-history-empty">
               No investing history rows were returned for this query.
             </div>
+          )}
+        </div>
+
+        <div className="investing-history-table-wrap top-edges-wrap">
+          <div className="investing-history-subtitle">Top Edges</div>
+          {topEdges.length > 0 ? (
+            <table className="investing-history-table">
+              <thead>
+                <tr>
+                  <th>src</th>
+                  <th>dst</th>
+                  <th>weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topEdges.map((edge, index) => (
+                  <tr key={`top-edge-${index}`}>
+                    <td>{formatCellValue(edge.src, "src")}</td>
+                    <td>{formatCellValue(edge.dst, "dst")}</td>
+                    <td>{formatNumberValue(edge.weight)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="investing-history-empty">No top edges available.</div>
           )}
         </div>
 
