@@ -25,6 +25,11 @@ const DEFAULT_INITIAL_STOCK = "삼성전자";
 const DEFAULT_HISTORY_LIMIT = 500;
 const CLIENT_HOP_QUERY_BUDGET = 30;
 const CLIENT_HOP_LEVEL_LIMIT = 20;
+const STOCK_NODE_MIN_DISTANCE = 1.05;
+const GRAPH_NODE_TEXT_SIZE_DESKTOP = 14;
+const GRAPH_NODE_TEXT_SIZE_MOBILE = 10;
+const GRAPH_NODE_TEXT_FAMILY =
+  "'Malgun Gothic', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif";
 const GRAPH_API_BASE_URL = (
   process.env.REACT_APP_GRAPH_API_BASE_URL || "https://api2.slayerzeroa.click"
 ).trim();
@@ -90,6 +95,127 @@ const HISTORY_KEYS = [
   "rows",
 ];
 
+const HISTORY_FAMILY_KEY_CANDIDATES = [
+  "family",
+  "family_id",
+  "familyid",
+  "family_group_key",
+  "family_group",
+  "familygroupkey",
+  "familygroup",
+  "disclosure_family",
+  "disclosure_family_id",
+  "family_key",
+];
+
+const HISTORY_FAMILY_ROOT_KEY_CANDIDATES = [
+  "family_root",
+  "familyroot",
+  "family_root_id",
+  "familyrootid",
+  "family_group_key",
+  "family_group_id",
+  "familygroupkey",
+  "familygroupid",
+  "disclosure_family_root",
+  "disclosure_family_root_id",
+  "disclosure_family_group",
+  "disclosure_family_group_id",
+  "root_family",
+  "root_family_id",
+  "family_root_rcept_no",
+  "family_root_receipt_no",
+  "root_rcept_no",
+  "root_receipt_no",
+];
+
+const HISTORY_FAMILY_GROUP_KEY_CANDIDATES = [
+  "family_group_key",
+  "family_group",
+  "family_group_id",
+  "familygroupkey",
+  "familygroup",
+  "familygroupid",
+  "disclosure_family_group",
+  "disclosure_family_group_id",
+  "group_family_key",
+  "group_family_id",
+];
+
+const HISTORY_FAMILY_LATEST_FLAG_KEY_CANDIDATES = [
+  "is_latest_in_family",
+  "latest_in_family",
+  "is_family_latest",
+  "family_is_latest",
+  "family_latest",
+];
+
+const HISTORY_FAMILY_VERSION_KEY_CANDIDATES = [
+  "family_disclosure_rank",
+  "family_version_no",
+  "family_version",
+  "family_rank",
+  "disclosure_rank",
+  "version_no",
+];
+
+const HISTORY_MEMBER_KEY_CANDIDATES = [
+  "rcept_no",
+  "rceptno",
+  "receipt_no",
+  "receiptno",
+  "member_rcept_no",
+  "memberrceptno",
+  "disclosure_no",
+  "disclosureno",
+  "doc_no",
+  "docno",
+  "document_no",
+  "documentno",
+  "family_member_rcept_no",
+  "familymemberrceptno",
+  "rcept_dt",
+  "rceptdt",
+  "receipt_dt",
+  "receiptdt",
+];
+
+const HISTORY_RECEIPT_KEY_CANDIDATES = [
+  "rcept_no",
+  "rceptno",
+  "receipt_no",
+  "receiptno",
+  "member_rcept_no",
+  "memberrceptno",
+  "disclosure_no",
+  "disclosureno",
+  "doc_no",
+  "docno",
+  "document_no",
+  "documentno",
+];
+
+const HISTORY_DATE_KEY_CANDIDATES = [
+  "rcept_dt",
+  "receipt_dt",
+  "as_of_date",
+  "effective_dt",
+];
+
+const HISTORY_REPORT_NAME_KEY_CANDIDATES = ["report_nm", "report_name"];
+
+const HISTORY_CORP_KEY_CANDIDATES = ["corp_name", "corp", "src", "source"];
+
+const HISTORY_INVESTEE_KEY_CANDIDATES = [
+  "iscmp_cmpnm",
+  "investee",
+  "dst",
+  "target",
+];
+
+const HISTORY_DIRECTION_KEY_CANDIDATES = ["event_direction", "direction"];
+const ENABLE_CLIENT_FAMILY_FALLBACK = false;
+
 const HANGUL_ACRONYM_TOKENS = [
   ["더블유", "w"],
   ["에이치", "h"],
@@ -119,6 +245,29 @@ const HANGUL_ACRONYM_TOKENS = [
   ["알", "r"],
 ];
 
+const HANGUL_TO_LATIN_TOKENS = [
+  ["삼성", "samsung"],
+  ["현대", "hyundai"],
+  ["기아", "kia"],
+  ["엘지", "lg"],
+  ["에스케이", "sk"],
+  ["씨제이", "cj"],
+  ["롯데", "lotte"],
+  ["한화", "hanwha"],
+  ["포스코", "posco"],
+  ["카카오", "kakao"],
+  ["네이버", "naver"],
+  ["전자", "electronics"],
+  ["생명", "life"],
+  ["화재", "fire"],
+  ["해상", "marine"],
+  ["보험", "insurance"],
+  ["증권", "securities"],
+  ["카드", "card"],
+  ["지주", "holdings"],
+  ["홀딩스", "holdings"],
+];
+
 function isoDateToUtcDay(value) {
   const text = String(value || "").trim();
   const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -129,7 +278,11 @@ function isoDateToUtcDay(value) {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
     return null;
   }
 
@@ -165,7 +318,10 @@ function clampSliderUtcDay(utcDay) {
   if (!Number.isFinite(day)) {
     return SNAPSHOT_SLIDER_MAX_DAY;
   }
-  return Math.min(SNAPSHOT_SLIDER_MAX_DAY, Math.max(SNAPSHOT_SLIDER_MIN_DAY, day));
+  return Math.min(
+    SNAPSHOT_SLIDER_MAX_DAY,
+    Math.max(SNAPSHOT_SLIDER_MIN_DAY, day),
+  );
 }
 
 function clampToSliderDateRange(value) {
@@ -233,7 +389,9 @@ async function requestJson(path, options = {}) {
 
   if (!res.ok) {
     const detail =
-      (data && typeof data === "object" && (data.detail || data.message || data.error)) ||
+      (data &&
+        typeof data === "object" &&
+        (data.detail || data.message || data.error)) ||
       raw ||
       `HTTP ${res.status}`;
     throw new Error(String(detail));
@@ -283,13 +441,499 @@ function normalizeRows(rawRows) {
     .filter(Boolean);
 }
 
+function pickRowValueByKeyCandidates(row, candidates) {
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return null;
+  }
+
+  for (const key of candidates) {
+    const value = row[key];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
+  const candidateSet = new Set(candidates.map((key) => String(key).toLowerCase()));
+  for (const [rawKey, value] of Object.entries(row)) {
+    if (!candidateSet.has(String(rawKey).toLowerCase())) {
+      continue;
+    }
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function normalizeFamilyKeyValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  const raw = String(value).trim();
+  if (!raw) {
+    return "";
+  }
+
+  const compact = raw.replace(/\s+/g, "").toLowerCase();
+  const digits = compact.replace(/\D+/g, "");
+  if (digits.length >= 8 && digits.length >= compact.length - 2) {
+    return digits;
+  }
+
+  return compact;
+}
+
+function pickFamilyKeyFromRow(row) {
+  const explicit = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_FAMILY_KEY_CANDIDATES),
+  );
+  if (explicit) {
+    return explicit;
+  }
+
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return "";
+  }
+
+  let best = "";
+  let bestScore = -Infinity;
+
+  Object.entries(row).forEach(([rawKey, rawValue]) => {
+    const key = String(rawKey || "").trim().toLowerCase();
+    if (!key || !key.includes("family")) {
+      return;
+    }
+
+    const value = normalizeFamilyKeyValue(rawValue);
+    if (!value) {
+      return;
+    }
+
+    let score = 0;
+    if (key === "family") {
+      score += 120;
+    }
+    if (key.includes("family_id") || key.includes("familyid")) {
+      score += 110;
+    }
+    if (key.includes("family_group")) {
+      score += 140;
+    }
+    if (key.includes("group_family")) {
+      score += 135;
+    }
+    if (key.includes("disclosure_family")) {
+      score += 90;
+    }
+    if (key.includes("family_key")) {
+      score += 80;
+    }
+    if (key.includes("member")) {
+      score -= 120;
+    }
+    if (/(rcept|receipt|doc|date|dt)/.test(key)) {
+      score -= 70;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = value;
+    }
+  });
+
+  return bestScore > 0 ? best : "";
+}
+
+function pickFamilyGroupKeyFromRow(row) {
+  const explicitGroup = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_FAMILY_GROUP_KEY_CANDIDATES),
+  );
+  if (explicitGroup) {
+    return `group:${explicitGroup}`;
+  }
+  return "";
+}
+
+function pickFamilyRootKeyFromRow(row) {
+  const explicitRoot = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_FAMILY_ROOT_KEY_CANDIDATES),
+  );
+  if (explicitRoot) {
+    return `root:${explicitRoot}`;
+  }
+
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    return "";
+  }
+
+  let best = "";
+  let bestScore = -Infinity;
+
+  Object.entries(row).forEach(([rawKey, rawValue]) => {
+    const key = String(rawKey || "").trim().toLowerCase();
+    if (!key || !key.includes("family")) {
+      return;
+    }
+    if (!key.includes("root") && !key.includes("group")) {
+      return;
+    }
+
+    const value = normalizeFamilyKeyValue(rawValue);
+    if (!value) {
+      return;
+    }
+
+    let score = 0;
+    if (key === "family_root" || key === "disclosure_family_root") {
+      score += 140;
+    }
+    if (key.includes("family_group") || key.includes("group_family")) {
+      score += 145;
+    }
+    if (key.includes("_id") || key.endsWith("id")) {
+      score += 40;
+    }
+    if (/(rcept|receipt|doc|date|dt)/.test(key)) {
+      score -= 30;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = value;
+    }
+  });
+
+  if (bestScore <= 0 || !best) {
+    return "";
+  }
+  return `root:${best}`;
+}
+
+function parseFamilyBooleanValue(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+    return null;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+  if (["1", "y", "yes", "true", "t"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "n", "no", "false", "f"].includes(normalized)) {
+    return false;
+  }
+  return null;
+}
+
+function pickFamilyLatestFlagFromRow(row) {
+  const raw = pickRowValueByKeyCandidates(
+    row,
+    HISTORY_FAMILY_LATEST_FLAG_KEY_CANDIDATES,
+  );
+  return parseFamilyBooleanValue(raw);
+}
+
+function parseFamilyNumericVersion(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const normalized = String(value).trim().replace(/,/g, "");
+  if (!normalized) {
+    return null;
+  }
+  const numeric = Number(normalized);
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+  const digits = normalized.replace(/\D+/g, "");
+  if (!digits) {
+    return null;
+  }
+  const parsed = Number(digits);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pickFamilyVersionFromRow(row) {
+  const raw = pickRowValueByKeyCandidates(
+    row,
+    HISTORY_FAMILY_VERSION_KEY_CANDIDATES,
+  );
+  return parseFamilyNumericVersion(raw);
+}
+
+function extractReceiptDigitsFromHistoryRow(row) {
+  const directReceiptValue = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_RECEIPT_KEY_CANDIDATES),
+  );
+  const directDigits = directReceiptValue.replace(/\D+/g, "");
+  const scannedDigits = [];
+
+  if (row && typeof row === "object" && !Array.isArray(row)) {
+    Object.entries(row).forEach(([rawKey, rawValue]) => {
+      const key = String(rawKey || "").trim().toLowerCase();
+      if (!/(rcept|receipt|disclosure|doc)/.test(key)) {
+        return;
+      }
+      if (key.includes("family")) {
+        return;
+      }
+
+      const digits = normalizeFamilyKeyValue(rawValue).replace(/\D+/g, "");
+      if (digits.length >= 8) {
+        scannedDigits.push(digits);
+      }
+    });
+  }
+
+  const receiptCandidates = [directDigits, ...scannedDigits].filter(Boolean);
+  if (!receiptCandidates.length) {
+    return "";
+  }
+
+  return receiptCandidates.sort(
+    (a, b) => b.length - a.length || b.localeCompare(a),
+  )[0];
+}
+
+function normalizeReportNameForFamily(rawValue) {
+  const source = String(rawValue || "").trim();
+  if (!source) {
+    return "";
+  }
+
+  // Strip correction markers so a correction and its original share one family key.
+  return source
+    .replace(/\[[^\]]*정정[^\]]*]\s*/g, " ")
+    .replace(/\((?:기재\s*)?정정\)\s*/g, " ")
+    .replace(/(?:^|\s)(?:기재\s*)?정정[:\s-]*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isCorrectionReportName(rawValue) {
+  const source = String(rawValue || "").trim();
+  if (!source) {
+    return false;
+  }
+
+  return (
+    /\[[^\]]*정정[^\]]*]/.test(source) ||
+    /\((?:기재\s*)?정정\)/.test(source) ||
+    /(?:^|\s)(?:기재\s*)?정정(?:[:\s-]|$)/.test(source)
+  );
+}
+
+function buildFallbackFamilyBaseKeyFromRow(row) {
+  const rawReportName = String(
+    pickRowValueByKeyCandidates(row, HISTORY_REPORT_NAME_KEY_CANDIDATES) || "",
+  ).trim();
+  if (!rawReportName) {
+    return "";
+  }
+
+  const normalizedReportName = normalizeReportNameForFamily(rawReportName);
+  if (!normalizedReportName) {
+    return "";
+  }
+
+  const corpLabel = normalizeCompanyName(
+    pickRowValueByKeyCandidates(row, HISTORY_CORP_KEY_CANDIDATES),
+  );
+  const investeeLabel = normalizeCompanyName(
+    pickRowValueByKeyCandidates(row, HISTORY_INVESTEE_KEY_CANDIDATES),
+  );
+  const direction = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_DIRECTION_KEY_CANDIDATES),
+  ).toUpperCase();
+
+  return [
+    corpLabel || "-",
+    investeeLabel || "-",
+    normalizedReportName,
+    direction || "-",
+  ].join("|");
+}
+
+function deriveFallbackFamilyKeyFromRow(row, correctionFamilyBases = null) {
+  const baseKey = buildFallbackFamilyBaseKeyFromRow(row);
+  if (!baseKey) {
+    return "";
+  }
+
+  const rawReportName = pickRowValueByKeyCandidates(
+    row,
+    HISTORY_REPORT_NAME_KEY_CANDIDATES,
+  );
+  const hasCorrectionCompanion =
+    correctionFamilyBases instanceof Set && correctionFamilyBases.has(baseKey);
+  if (!isCorrectionReportName(rawReportName) && !hasCorrectionCompanion) {
+    return "";
+  }
+
+  return `fallback:${baseKey}`;
+}
+
+function buildHistoryFamilyRowMeta(row, index, correctionFamilyBases = null) {
+  const familyRootKey = pickFamilyRootKeyFromRow(row);
+  const familyGroupKey = pickFamilyGroupKeyFromRow(row);
+  const explicitFamilyKey = pickFamilyKeyFromRow(row);
+  const familyKey =
+    familyRootKey ||
+    familyGroupKey ||
+    explicitFamilyKey ||
+    (ENABLE_CLIENT_FAMILY_FALLBACK
+      ? deriveFallbackFamilyKeyFromRow(row, correctionFamilyBases)
+      : "");
+  if (!familyKey) {
+    return null;
+  }
+
+  const rawMemberValue = pickRowValueByKeyCandidates(
+    row,
+    HISTORY_MEMBER_KEY_CANDIDATES,
+  );
+  const normalizedMemberKey = normalizeFamilyKeyValue(rawMemberValue);
+  const receiptDigits = extractReceiptDigitsFromHistoryRow(row);
+  const comparableFamilyKey = String(familyKey)
+    .replace(/^(?:root|group|fallback):/i, "")
+    .trim();
+  const memberKey =
+    (receiptDigits && `rcept:${receiptDigits}`) ||
+    (normalizedMemberKey && normalizedMemberKey !== comparableFamilyKey
+      ? normalizedMemberKey
+      : `__row_${index}`);
+  const dateValue = normalizeFamilyKeyValue(
+    pickRowValueByKeyCandidates(row, HISTORY_DATE_KEY_CANDIDATES),
+  ).slice(0, 10);
+  const latestFlag = pickFamilyLatestFlagFromRow(row);
+  const familyVersion = pickFamilyVersionFromRow(row);
+
+  return {
+    familyKey,
+    memberKey,
+    receiptDigits,
+    dateValue,
+    latestFlag,
+    familyVersion,
+    rowIndex: index,
+  };
+}
+
+function isLaterHistoryFamilyMember(candidate, current) {
+  if (
+    candidate.latestFlag !== null &&
+    current.latestFlag !== null &&
+    candidate.latestFlag !== current.latestFlag
+  ) {
+    return candidate.latestFlag;
+  }
+
+  if (
+    Number.isFinite(candidate.familyVersion) &&
+    Number.isFinite(current.familyVersion) &&
+    candidate.familyVersion !== current.familyVersion
+  ) {
+    return candidate.familyVersion > current.familyVersion;
+  }
+
+  const candidateReceipt = candidate.receiptDigits || "";
+  const currentReceipt = current.receiptDigits || "";
+  if (candidateReceipt && currentReceipt && candidateReceipt !== currentReceipt) {
+    return candidateReceipt > currentReceipt;
+  }
+
+  const candidateDate = candidate.dateValue || "";
+  const currentDate = current.dateValue || "";
+  if (candidateDate && currentDate && candidateDate !== currentDate) {
+    return candidateDate > currentDate;
+  }
+
+  return candidate.rowIndex > current.rowIndex;
+}
+
+function keepLatestHistoryRowsByFamily(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) {
+    return rows;
+  }
+
+  const correctionFamilyBases = ENABLE_CLIENT_FAMILY_FALLBACK ? new Set() : null;
+  if (correctionFamilyBases) {
+    rows.forEach((row) => {
+      const rawReportName = pickRowValueByKeyCandidates(
+        row,
+        HISTORY_REPORT_NAME_KEY_CANDIDATES,
+      );
+      if (!isCorrectionReportName(rawReportName)) {
+        return;
+      }
+
+      const baseKey = buildFallbackFamilyBaseKeyFromRow(row);
+      if (baseKey) {
+        correctionFamilyBases.add(baseKey);
+      }
+    });
+  }
+
+  const latestMemberByFamily = new Map();
+  rows.forEach((row, index) => {
+    const meta = buildHistoryFamilyRowMeta(row, index, correctionFamilyBases);
+    if (!meta) {
+      return;
+    }
+
+    const current = latestMemberByFamily.get(meta.familyKey);
+    if (!current || isLaterHistoryFamilyMember(meta, current)) {
+      latestMemberByFamily.set(meta.familyKey, meta);
+    }
+  });
+
+  if (!latestMemberByFamily.size) {
+    return rows;
+  }
+
+  return rows.filter((row, index) => {
+    const meta = buildHistoryFamilyRowMeta(row, index, correctionFamilyBases);
+    if (!meta) {
+      return true;
+    }
+    const latest = latestMemberByFamily.get(meta.familyKey);
+    if (!latest) {
+      return true;
+    }
+
+    if (latest.memberKey.startsWith("__row_")) {
+      return latest.rowIndex === meta.rowIndex;
+    }
+
+    return latest.memberKey === meta.memberKey;
+  });
+}
+
 function extractHistoryRows(payload) {
   if (!payload || typeof payload !== "object") {
     return [];
   }
 
   for (const key of HISTORY_KEYS) {
-    const rows = normalizeRows(payload[key]);
+    const rows = keepLatestHistoryRowsByFamily(normalizeRows(payload[key]));
     if (rows.length) {
       return rows;
     }
@@ -317,8 +961,12 @@ function extractTopEdges(payload) {
 
     const rows = rawRows
       .map((row) => {
-        const src = normalizeCompanyName(row?.src || row?.source || row?.investor);
-        const dst = normalizeCompanyName(row?.dst || row?.target || row?.investee);
+        const src = normalizeCompanyName(
+          row?.src || row?.source || row?.investor,
+        );
+        const dst = normalizeCompanyName(
+          row?.dst || row?.target || row?.investee,
+        );
         const weight = Number(row?.weight ?? row?.value ?? row?.holding_amount);
         if (!src || !dst) {
           return null;
@@ -401,7 +1049,19 @@ function normalizeCompanyName(rawName) {
   return normalized || raw;
 }
 
-function formatCellValue(value, columnName = "") {
+function isHistoryDirectionColumn(columnName) {
+  const key = String(columnName || "").trim().toLowerCase();
+  return key === "event_direction" || key === "direction";
+}
+
+function formatCellValue(value, columnName = "", row = null) {
+  if (isHistoryDirectionColumn(columnName)) {
+    const resolvedDirection = normalizeHistoryDirectionValue(row);
+    if (resolvedDirection === "IN" || resolvedDirection === "OUT") {
+      return resolvedDirection;
+    }
+  }
+
   if (value === null || value === undefined || value === "") {
     return "-";
   }
@@ -429,6 +1089,17 @@ function formatNumberValue(value) {
   return numeric.toLocaleString("en-US", {
     maximumFractionDigits: 0,
   });
+}
+
+function isFamilyRelatedHistoryColumn(columnName) {
+  const key = String(columnName || "").trim().toLowerCase();
+  if (!key) {
+    return false;
+  }
+  if (key.includes("family")) {
+    return true;
+  }
+  return key === "source" || key === "src";
 }
 
 function buildStockList(stocks) {
@@ -464,7 +1135,10 @@ function buildStockList(stocks) {
     }
   });
 
-  const collator = new Intl.Collator("ko", { numeric: true, sensitivity: "base" });
+  const collator = new Intl.Collator("ko", {
+    numeric: true,
+    sensitivity: "base",
+  });
   return Array.from(unique.values()).sort((a, b) =>
     collator.compare(a.label, b.label),
   );
@@ -517,18 +1191,23 @@ function normalizeTraceLabel(trace) {
       return item || fallback;
     });
 
-    if (Array.isArray(normalizedTrace.hovertext) && normalizedTrace.hovertext.length) {
-      normalizedTrace.hovertext = normalizedTrace.hovertext.map((item, index) => {
-        const detail = toRawString(item);
-        const fullName = toRawString(fullNames[index]);
-        if (!detail) {
-          return `Full Name: ${fullName}`;
-        }
-        if (detail.toLowerCase().includes("full name:")) {
-          return detail;
-        }
-        return `Full Name: ${fullName}<br>${detail}`;
-      });
+    if (
+      Array.isArray(normalizedTrace.hovertext) &&
+      normalizedTrace.hovertext.length
+    ) {
+      normalizedTrace.hovertext = normalizedTrace.hovertext.map(
+        (item, index) => {
+          const detail = toRawString(item);
+          const fullName = toRawString(fullNames[index]);
+          if (!detail) {
+            return `Full Name: ${fullName}`;
+          }
+          if (detail.toLowerCase().includes("full name:")) {
+            return detail;
+          }
+          return `Full Name: ${fullName}<br>${detail}`;
+        },
+      );
       normalizedTrace.hovertemplate = "%{hovertext}<extra></extra>";
     } else {
       normalizedTrace.hovertext = Array.isArray(normalizedTrace.text)
@@ -569,7 +1248,31 @@ function compactCompanyKey(value) {
   if (value === null || value === undefined) {
     return "";
   }
-  return String(value).toLowerCase().replace(/[^0-9a-zA-Z가-힣]+/g, "");
+  return String(value)
+    .toLowerCase()
+    .replace(/[^0-9a-zA-Z가-힣]+/g, "");
+}
+
+function compactAsciiKey(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return String(value)
+    .toLowerCase()
+    .replace(/[^0-9a-z]+/g, "");
+}
+
+function extractLeadingAsciiToken(value) {
+  const source = String(value || "").trim();
+  if (!source) {
+    return "";
+  }
+  const match = source.match(/^([A-Za-z0-9]{1,12})/);
+  return compactAsciiKey(match ? match[1] : "");
+}
+
+function hasAsciiCharacters(value) {
+  return /[A-Za-z]/.test(String(value || ""));
 }
 
 function normalizeSnapshotDateList(rawDates) {
@@ -623,6 +1326,57 @@ function resolveSnapshotDateForSelectedDate(snapshotDates, selectedDate) {
   return snapshotDates[safeIdx] || clampToSliderDateRange(selectedDate);
 }
 
+function buildNearestSnapshotCandidates(
+  snapshotDates,
+  selectedDate,
+  maxCandidates = 10,
+) {
+  if (!Array.isArray(snapshotDates) || !snapshotDates.length) {
+    return [];
+  }
+
+  const normalized = normalizeSnapshotDateList(snapshotDates);
+  if (!normalized.length) {
+    return [];
+  }
+
+  const centerDate = clampToSliderDateRange(
+    selectedDate || normalized[normalized.length - 1],
+  );
+  const centerIndex = findSnapshotIndexByDate(normalized, centerDate);
+  const maxCount = Math.max(1, Number(maxCandidates) || 10);
+  const out = [];
+  const seen = new Set();
+
+  const pushIndex = (index) => {
+    if (index < 0 || index >= normalized.length) {
+      return;
+    }
+    const date = normalized[index];
+    if (!date || seen.has(date)) {
+      return;
+    }
+    seen.add(date);
+    out.push(date);
+  };
+
+  pushIndex(centerIndex);
+  for (let step = 1; out.length < maxCount; step += 1) {
+    const left = centerIndex - step;
+    const right = centerIndex + step;
+    if (left < 0 && right >= normalized.length) {
+      break;
+    }
+    pushIndex(left);
+    if (out.length >= maxCount) {
+      break;
+    }
+    pushIndex(right);
+  }
+
+  return out;
+}
+
 function extractAliasSegments(rawName) {
   if (!rawName) {
     return [];
@@ -645,6 +1399,13 @@ function extractAliasSegments(rawName) {
   englishSegments.forEach((segment) => {
     const normalized = String(segment || "").trim();
     if (normalized) {
+      // Prevent short acronym collisions like "SK" from "SK하이닉스" or "S&K폴리텍".
+      // Keep short aliases only when the whole raw name is also that short alias.
+      const segmentKey = compactCompanyKey(normalized);
+      const rawKey = compactCompanyKey(value);
+      if (segmentKey.length <= 2 && rawKey.length > segmentKey.length) {
+        return;
+      }
       segments.push(normalized);
     }
   });
@@ -716,6 +1477,36 @@ function buildSuffixReducedVariants(value) {
   return Array.from(variants);
 }
 
+function buildRomanizedAliases(value) {
+  const normalized = normalizeCompanyName(value);
+  if (!normalized || !/[가-힣]/.test(normalized)) {
+    return [];
+  }
+
+  let translated = normalized;
+  HANGUL_TO_LATIN_TOKENS.forEach(([from, to]) => {
+    translated = translated.split(from).join(` ${to} `);
+  });
+
+  translated = translated
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!translated) {
+    return [];
+  }
+
+  const aliases = new Set([translated, translated.replace(/\s+/g, "")]);
+  const firstToken = translated.split(" ")[0];
+  if (firstToken && firstToken.length >= 2) {
+    aliases.add(firstToken);
+  }
+
+  return Array.from(aliases).filter(Boolean);
+}
+
 function getCompanyMatchKeys(name) {
   const raw = String(name || "").trim();
   if (!raw) {
@@ -756,11 +1547,20 @@ function getCompanyMatchKeys(name) {
   };
 
   addCandidate(raw);
+  buildRomanizedAliases(raw).forEach(addCandidate);
   extractAliasSegments(raw).forEach(addCandidate);
   return Array.from(keys);
 }
 
 function toComparableCompanyKey(name) {
+  // Prefer a stable key derived from the normalized company name itself.
+  // This avoids alias collisions such as "삼성전자" and "삼성모바일디스플레이"
+  // both collapsing to a short romanized token like "samsung".
+  const normalizedKey = compactCompanyKey(normalizeCompanyName(name));
+  if (normalizedKey) {
+    return normalizedKey;
+  }
+
   const keys = getCompanyMatchKeys(name);
   if (!keys.length) {
     return "";
@@ -768,7 +1568,9 @@ function toComparableCompanyKey(name) {
 
   const alnumKeys = keys.filter((key) => /^[a-z0-9]+$/.test(key));
   if (alnumKeys.length) {
-    return alnumKeys.sort((a, b) => a.length - b.length || a.localeCompare(b))[0];
+    return alnumKeys.sort(
+      (a, b) => a.length - b.length || a.localeCompare(b),
+    )[0];
   }
 
   return keys.sort((a, b) => a.length - b.length || a.localeCompare(b))[0];
@@ -1014,7 +1816,9 @@ function collectPossibleCompanyNames(value, candidates) {
         candidates.add(acronymAlias);
       }
     }
-    extractAliasSegments(normalizedRaw).forEach((alias) => candidates.add(alias));
+    extractAliasSegments(normalizedRaw).forEach((alias) =>
+      candidates.add(alias),
+    );
     return;
   }
 
@@ -1048,7 +1852,9 @@ function extractCompanyCandidatesFromPlotPoint(point) {
     point.data?.name,
   ];
 
-  maybeValues.forEach((value) => collectPossibleCompanyNames(value, candidates));
+  maybeValues.forEach((value) =>
+    collectPossibleCompanyNames(value, candidates),
+  );
   return Array.from(candidates);
 }
 
@@ -1090,7 +1896,12 @@ function extractNodePointsFromFigureData(traces) {
       const x = Number(xs[i]);
       const y = Number(ys[i]);
       const z = Number(zs[i] ?? 0);
-      if (!key || !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      if (
+        !key ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y) ||
+        !Number.isFinite(z)
+      ) {
         continue;
       }
       nodes.set(key, {
@@ -1133,29 +1944,595 @@ function extractNormalizedTopEdges(topEdges) {
     .filter(Boolean);
 }
 
-function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = "") {
+function parseSignedHistoryNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : NaN;
+  }
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return NaN;
+  }
+
+  const parenNegative = text.match(/^\((.+)\)$/);
+  if (parenNegative && parenNegative[1]) {
+    const numericParen = Number(String(parenNegative[1]).replace(/,/g, ""));
+    return Number.isFinite(numericParen) ? -numericParen : NaN;
+  }
+
+  const numeric = Number(text.replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : NaN;
+}
+
+function resolveHistoryRowWeight(row) {
+  const amount = Math.abs(parseSignedHistoryNumber(row?.trfdtl_trfprc));
+  if (Number.isFinite(amount) && amount > 0) {
+    return amount;
+  }
+
+  const shares = Math.abs(parseSignedHistoryNumber(row?.trfdtl_stkcnt));
+  if (Number.isFinite(shares) && shares > 0) {
+    return shares;
+  }
+
+  return 1;
+}
+
+function normalizeHistoryDirectionValue(row) {
+  // Prefer numeric sign when available because some rows have inconsistent event_direction text.
+  const signedAmount = parseSignedHistoryNumber(row?.trfdtl_trfprc);
+  const signedShares = parseSignedHistoryNumber(row?.trfdtl_stkcnt);
+  const hasAmount = Number.isFinite(signedAmount) && signedAmount !== 0;
+  const hasShares = Number.isFinite(signedShares) && signedShares !== 0;
+  if (hasAmount || hasShares) {
+    if (hasAmount && hasShares) {
+      if (Math.sign(signedAmount) === Math.sign(signedShares)) {
+        return signedAmount < 0 ? "OUT" : "IN";
+      }
+      // If amount and share signs conflict, trust transaction amount first.
+      return signedAmount < 0 ? "OUT" : "IN";
+    }
+    if (hasAmount) {
+      return signedAmount < 0 ? "OUT" : "IN";
+    }
+    return signedShares < 0 ? "OUT" : "IN";
+  }
+
+  const rawDirection = pickRowValueByKeyCandidates(
+    row,
+    HISTORY_DIRECTION_KEY_CANDIDATES,
+  );
+  const normalized = String(rawDirection || "").trim().toLowerCase();
+  if (!normalized) {
+    return "";
+  }
+
+  if (
+    normalized === "out" ||
+    normalized === "o" ||
+    normalized === "sell" ||
+    normalized === "dispose" ||
+    normalized === "disposal" ||
+    normalized === "decrease" ||
+    normalized === "exit"
+  ) {
+    return "OUT";
+  }
+  if (
+    normalized === "in" ||
+    normalized === "i" ||
+    normalized === "buy" ||
+    normalized === "acquire" ||
+    normalized === "increase" ||
+    normalized === "entry"
+  ) {
+    return "IN";
+  }
+
+  if (/(^|[^a-z])out([^a-z]|$)/.test(normalized)) {
+    return "OUT";
+  }
+  if (/(^|[^a-z])in([^a-z]|$)/.test(normalized)) {
+    return "IN";
+  }
+  if (/(처분|매도|감소|유출)/.test(normalized)) {
+    return "OUT";
+  }
+  if (/(취득|매수|증가|유입)/.test(normalized)) {
+    return "IN";
+  }
+
+  return normalized.toUpperCase();
+}
+
+function isOutboundHistoryRow(row) {
+  return normalizeHistoryDirectionValue(row) === "OUT";
+}
+
+function collectOutboundCenterEdgeKeysFromHistoryRows(historyRows, selectedLabel) {
+  if (!Array.isArray(historyRows) || !historyRows.length) {
+    return new Set();
+  }
+
+  const selectedKeys = new Set(getCompanyMatchKeys(selectedLabel));
+  if (!selectedKeys.size) {
+    return new Set();
+  }
+
+  const directionalScoreByEdge = new Map();
+  historyRows.forEach((row) => {
+    const srcLabel = normalizeCompanyName(
+      row?.corp_name || row?.src || row?.source || row?.investor,
+    );
+    const dstLabel = normalizeCompanyName(
+      row?.iscmp_cmpnm || row?.dst || row?.target || row?.investee,
+    );
+    if (!srcLabel || !dstLabel) {
+      return;
+    }
+
+    const srcKey = toComparableCompanyKey(srcLabel);
+    const dstKey = toComparableCompanyKey(dstLabel);
+    if (!srcKey || !dstKey || srcKey === dstKey) {
+      return;
+    }
+
+    const srcMatch = getCompanyMatchKeys(srcLabel).some((key) =>
+      selectedKeys.has(key),
+    );
+    if (!srcMatch) {
+      return;
+    }
+
+    const direction = normalizeHistoryDirectionValue(row);
+    if (direction !== "IN" && direction !== "OUT") {
+      return;
+    }
+
+    const edgeKey = `${srcKey}->${dstKey}`;
+    const signedWeight = resolveHistoryRowWeight(row);
+    const delta = direction === "OUT" ? -signedWeight : signedWeight;
+    directionalScoreByEdge.set(
+      edgeKey,
+      (directionalScoreByEdge.get(edgeKey) || 0) + delta,
+    );
+  });
+
+  const outboundEdgeKeys = new Set();
+  directionalScoreByEdge.forEach((score, edgeKey) => {
+    if (score < 0) {
+      outboundEdgeKeys.add(edgeKey);
+    }
+  });
+  return outboundEdgeKeys;
+}
+
+function buildFallbackGraphFromHistory({
+  historyRows,
+  searchLabel,
+  baseFigure,
+  maxEdges,
+  historyLimit,
+}) {
+  if (!Array.isArray(historyRows) || !historyRows.length) {
+    return null;
+  }
+
+  const selectedLabel = normalizeCompanyName(searchLabel);
+  const selectedKeys = new Set(getCompanyMatchKeys(selectedLabel));
+  if (!selectedKeys.size) {
+    return null;
+  }
+
+  const edgeAgg = new Map();
+  const nodeLabelByKey = new Map();
+  const rootCandidateCount = new Map();
+  const filteredRows = [];
+
+  historyRows.forEach((row) => {
+    if (isOutboundHistoryRow(row)) {
+      return;
+    }
+
+    const srcLabel = normalizeCompanyName(
+      row?.corp_name || row?.src || row?.source || row?.investor,
+    );
+    const dstLabel = normalizeCompanyName(
+      row?.iscmp_cmpnm || row?.dst || row?.target || row?.investee,
+    );
+    if (!srcLabel || !dstLabel) {
+      return;
+    }
+
+    const srcKeys = getCompanyMatchKeys(srcLabel);
+    const dstKeys = getCompanyMatchKeys(dstLabel);
+    const srcMatch = srcKeys.some((key) => selectedKeys.has(key));
+    const dstMatch = dstKeys.some((key) => selectedKeys.has(key));
+    if (!srcMatch && !dstMatch) {
+      return;
+    }
+
+    const srcKey = toComparableCompanyKey(srcLabel);
+    const dstKey = toComparableCompanyKey(dstLabel);
+    if (!srcKey || !dstKey || srcKey === dstKey) {
+      return;
+    }
+
+    filteredRows.push(row);
+    nodeLabelByKey.set(srcKey, srcLabel);
+    nodeLabelByKey.set(dstKey, dstLabel);
+    if (srcMatch) {
+      rootCandidateCount.set(srcKey, (rootCandidateCount.get(srcKey) || 0) + 1);
+    }
+    if (dstMatch) {
+      rootCandidateCount.set(dstKey, (rootCandidateCount.get(dstKey) || 0) + 1);
+    }
+
+    const edgeKey = `${srcKey}->${dstKey}`;
+    const weight = resolveHistoryRowWeight(row);
+    const prev = edgeAgg.get(edgeKey);
+    if (!prev) {
+      edgeAgg.set(edgeKey, {
+        srcKey,
+        dstKey,
+        srcLabel,
+        dstLabel,
+        weight,
+      });
+      return;
+    }
+
+    edgeAgg.set(edgeKey, {
+      ...prev,
+      weight: prev.weight + weight,
+    });
+  });
+
+  if (!edgeAgg.size) {
+    return null;
+  }
+
+  const sortedRootCandidates = Array.from(rootCandidateCount.entries()).sort(
+    (a, b) => Number(b[1]) - Number(a[1]),
+  );
+  const rootKey =
+    sortedRootCandidates[0]?.[0] || Array.from(edgeAgg.values())[0]?.srcKey;
+  if (!rootKey) {
+    return null;
+  }
+
+  const rootDisplayLabel =
+    nodeLabelByKey.get(rootKey) || selectedLabel || String(searchLabel || "");
+  const limitedEdges = Array.from(edgeAgg.values())
+    .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))
+    .slice(0, Math.max(1, maxEdges || SYSTEM_MAX_EDGES));
+  if (!limitedEdges.length) {
+    return null;
+  }
+
+  const limitedEdgeMap = new Map();
+  const nodeKeys = new Set([rootKey]);
+  limitedEdges.forEach((edge) => {
+    limitedEdgeMap.set(`${edge.srcKey}->${edge.dstKey}`, edge);
+    nodeKeys.add(edge.srcKey);
+    nodeKeys.add(edge.dstKey);
+  });
+
+  const nodeMap = new Map();
+  nodeMap.set(rootKey, {
+    key: rootKey,
+    label: selectedLabel || rootDisplayLabel,
+    fullLabel: rootDisplayLabel,
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+
+  const otherKeys = Array.from(nodeKeys).filter((key) => key !== rootKey);
+  otherKeys.forEach((key, index) => {
+    const layer = Math.floor(index / 12);
+    const angle = ((index % 12) / 12) * Math.PI * 2;
+    const radius = 1.75 + layer * 0.9;
+    const zOffset = ((index % 6) - 2.5) * 0.28;
+    const label = nodeLabelByKey.get(key) || key;
+    nodeMap.set(key, {
+      key,
+      label,
+      fullLabel: label,
+      x: radius * Math.cos(angle),
+      y: radius * Math.sin(angle),
+      z: zOffset,
+    });
+  });
+
+  const figureOverride = buildExpandedFigureFromEdgeMap(
+    {
+      data: [],
+      layout: baseFigure?.layout || {},
+    },
+    nodeMap,
+    limitedEdgeMap,
+    rootKey,
+  );
+
+  const topEdgesRows = limitedEdges
+    .slice()
+    .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))
+    .slice(0, 20)
+    .map((edge) => ({
+      src: edge.srcLabel,
+      dst: edge.dstLabel,
+      weight: Number(edge.weight || 0),
+    }));
+
+  return {
+    figureOverride,
+    topEdgesRows,
+    rootDisplayLabel: selectedLabel || rootDisplayLabel,
+    filteredHistoryRows: filteredRows.slice(
+      0,
+      Math.max(1, Number(historyLimit || DEFAULT_HISTORY_LIMIT)),
+    ),
+  };
+}
+
+function extractRelatedCounterpartyKeysFromHistoryRows(historyRows, selectedLabel) {
+  if (!Array.isArray(historyRows) || !historyRows.length) {
+    return new Set();
+  }
+
+  const selectedKeys = new Set(getCompanyMatchKeys(selectedLabel));
+  const selectedCanonicalKey = toComparableCompanyKey(selectedLabel);
+  if (!selectedKeys.size && !selectedCanonicalKey) {
+    return new Set();
+  }
+
+  const relatedKeys = new Set();
+  historyRows.forEach((row) => {
+    if (isOutboundHistoryRow(row)) {
+      return;
+    }
+
+    const srcLabel = normalizeCompanyName(
+      row?.corp_name || row?.src || row?.source || row?.investor,
+    );
+    const dstLabel = normalizeCompanyName(
+      row?.iscmp_cmpnm || row?.dst || row?.target || row?.investee,
+    );
+    if (!srcLabel || !dstLabel) {
+      return;
+    }
+
+    const srcKey = toComparableCompanyKey(srcLabel);
+    const dstKey = toComparableCompanyKey(dstLabel);
+    if (!srcKey || !dstKey || srcKey === dstKey) {
+      return;
+    }
+
+    const srcMatch = getCompanyMatchKeys(srcLabel).some((key) =>
+      selectedKeys.has(key),
+    );
+    const dstMatch = getCompanyMatchKeys(dstLabel).some((key) =>
+      selectedKeys.has(key),
+    );
+    if (!srcMatch && !dstMatch) {
+      return;
+    }
+
+    if (srcMatch && !dstMatch) {
+      if (dstKey !== selectedCanonicalKey) {
+        relatedKeys.add(dstKey);
+      }
+      return;
+    }
+
+    if (dstMatch && !srcMatch) {
+      if (srcKey !== selectedCanonicalKey) {
+        relatedKeys.add(srcKey);
+      }
+      return;
+    }
+
+    if (srcKey !== selectedCanonicalKey) {
+      relatedKeys.add(srcKey);
+    }
+    if (dstKey !== selectedCanonicalKey) {
+      relatedKeys.add(dstKey);
+    }
+  });
+
+  return relatedKeys;
+}
+
+function extractRelatedCounterpartyKeysFromTopEdges(topEdges, selectedLabel) {
+  if (!Array.isArray(topEdges) || !topEdges.length) {
+    return new Set();
+  }
+
+  const selectedKeys = new Set(getCompanyMatchKeys(selectedLabel));
+  const selectedCanonicalKey = toComparableCompanyKey(selectedLabel);
+  if (!selectedKeys.size && !selectedCanonicalKey) {
+    return new Set();
+  }
+
+  const relatedKeys = new Set();
+  topEdges.forEach((edge) => {
+    const srcLabel = normalizeCompanyName(
+      edge?.src || edge?.source || edge?.investor,
+    );
+    const dstLabel = normalizeCompanyName(
+      edge?.dst || edge?.target || edge?.investee,
+    );
+    if (!srcLabel || !dstLabel) {
+      return;
+    }
+
+    const srcKey = toComparableCompanyKey(srcLabel);
+    const dstKey = toComparableCompanyKey(dstLabel);
+    if (!srcKey || !dstKey || srcKey === dstKey) {
+      return;
+    }
+
+    const srcMatch = getCompanyMatchKeys(srcLabel).some((key) =>
+      selectedKeys.has(key),
+    );
+    const dstMatch = getCompanyMatchKeys(dstLabel).some((key) =>
+      selectedKeys.has(key),
+    );
+    if (!srcMatch && !dstMatch) {
+      return;
+    }
+
+    if (srcMatch && !dstMatch) {
+      if (dstKey !== selectedCanonicalKey) {
+        relatedKeys.add(dstKey);
+      }
+      return;
+    }
+
+    if (dstMatch && !srcMatch) {
+      if (srcKey !== selectedCanonicalKey) {
+        relatedKeys.add(srcKey);
+      }
+      return;
+    }
+
+    if (srcKey !== selectedCanonicalKey) {
+      relatedKeys.add(srcKey);
+    }
+    if (dstKey !== selectedCanonicalKey) {
+      relatedKeys.add(dstKey);
+    }
+  });
+
+  return relatedKeys;
+}
+
+function buildExpandedFigureFromEdgeMap(
+  baseFigure,
+  nodeMap,
+  edgeMap,
+  rootKey = "",
+) {
+  const resolveStableDirection = (key) => {
+    const source = String(key || "");
+    let hash = 0;
+    for (let i = 0; i < source.length; i += 1) {
+      hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+    }
+
+    const angle = ((hash % 360) / 180) * Math.PI;
+    const z = (((hash >>> 9) % 200) / 100 - 1) * 0.35;
+    const planar = Math.sqrt(Math.max(1 - z * z, 0.05));
+    return {
+      x: Math.cos(angle) * planar,
+      y: Math.sin(angle) * planar,
+      z,
+    };
+  };
+
+  const enforceRootNodeDistance = (
+    inputNodeMap,
+    selectedRootKey,
+    minDistance = STOCK_NODE_MIN_DISTANCE,
+  ) => {
+    if (!(inputNodeMap instanceof Map) || !selectedRootKey) {
+      return inputNodeMap;
+    }
+
+    const root = inputNodeMap.get(selectedRootKey);
+    if (!root) {
+      return inputNodeMap;
+    }
+
+    const rootX = Number(root.x);
+    const rootY = Number(root.y);
+    const rootZ = Number(root.z);
+    if (
+      !Number.isFinite(rootX) ||
+      !Number.isFinite(rootY) ||
+      !Number.isFinite(rootZ)
+    ) {
+      return inputNodeMap;
+    }
+
+    const requiredDistance = Math.max(
+      0.6,
+      Number(minDistance) || STOCK_NODE_MIN_DISTANCE,
+    );
+    const adjusted = new Map();
+    inputNodeMap.forEach((node, key) => adjusted.set(key, { ...node }));
+
+    adjusted.forEach((node, key) => {
+      if (key === selectedRootKey) {
+        return;
+      }
+
+      const x = Number(node.x);
+      const y = Number(node.y);
+      const z = Number(node.z);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+        return;
+      }
+
+      let dx = x - rootX;
+      let dy = y - rootY;
+      let dz = z - rootZ;
+      let distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (distance >= requiredDistance) {
+        return;
+      }
+
+      if (distance < 1e-6) {
+        const stable = resolveStableDirection(key);
+        dx = stable.x;
+        dy = stable.y;
+        dz = stable.z;
+        distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      }
+
+      if (distance < 1e-6) {
+        return;
+      }
+
+      const scale = requiredDistance / distance;
+      node.x = rootX + dx * scale;
+      node.y = rootY + dy * scale;
+      node.z = rootZ + dz * scale;
+    });
+
+    return adjusted;
+  };
+
   const traces = Array.isArray(baseFigure?.data) ? baseFigure.data : [];
-  const lineTemplate = traces.find((trace) => String(trace?.mode || "").includes("lines"));
+  const lineTemplate = traces.find((trace) =>
+    String(trace?.mode || "").includes("lines"),
+  );
   const nodeTemplate = traces.find((trace) =>
     String(trace?.mode || "").includes("markers"),
   );
+  const positionedNodeMap = enforceRootNodeDistance(nodeMap, rootKey);
 
   const edgeX = [];
   const edgeY = [];
   const edgeZ = [];
+  const edgeText = [];
   edgeMap.forEach((edge) => {
-    const srcNode = nodeMap.get(edge.srcKey);
-    const dstNode = nodeMap.get(edge.dstKey);
+    const srcNode = positionedNodeMap.get(edge.srcKey);
+    const dstNode = positionedNodeMap.get(edge.dstKey);
     if (!srcNode || !dstNode) {
       return;
     }
 
+    const weightText = Number(edge.weight || 0).toLocaleString("en-US");
+    const hoverLabel = `${edge.srcLabel} -> ${edge.dstLabel}<br>Relationship Strength: ${weightText}`;
+
     edgeX.push(srcNode.x, dstNode.x, null);
     edgeY.push(srcNode.y, dstNode.y, null);
     edgeZ.push(srcNode.z, dstNode.z, null);
+    edgeText.push(hoverLabel, hoverLabel, null);
   });
 
-  const sortedNodes = Array.from(nodeMap.values()).sort((a, b) => {
+  const sortedNodes = Array.from(positionedNodeMap.values()).sort((a, b) => {
     if (a.key === rootKey) {
       return -1;
     }
@@ -1172,6 +2549,7 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
   const nodeCustomData = [];
   const nodeHoverText = [];
   const nodeColors = [];
+  const nodeSizes = [];
 
   const resolveRoleAgainstRoot = (nodeKey) => {
     if (!rootKey || nodeKey === rootKey) {
@@ -1217,16 +2595,49 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
     return "#334155";
   };
 
+  const baseMarkerSize = (() => {
+    const templateSize = nodeTemplate?.marker?.size;
+    if (Array.isArray(templateSize) && templateSize.length) {
+      const first = Number(templateSize[0]);
+      if (Number.isFinite(first)) {
+        return first;
+      }
+    }
+    const numeric = Number(templateSize);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+    return 6;
+  })();
+
   sortedNodes.forEach((node) => {
     const role = resolveRoleAgainstRoot(node.key);
+    const displayLabel =
+      role === "Selected" ? node.fullLabel || node.label : node.label;
     nodeX.push(node.x);
     nodeY.push(node.y);
     nodeZ.push(node.z);
-    nodeText.push(node.label);
+    nodeText.push(displayLabel);
     nodeCustomData.push(role);
     nodeHoverText.push(node.fullLabel || node.label);
     nodeColors.push(roleColor(role));
+    nodeSizes.push(
+      role === "Selected"
+        ? Math.max(baseMarkerSize + 2, baseMarkerSize * 1.35)
+        : baseMarkerSize,
+    );
   });
+
+  const nodeMode = (() => {
+    const raw = String(nodeTemplate?.mode || "").trim();
+    if (!raw) {
+      return "markers+text";
+    }
+    if (raw.includes("text")) {
+      return raw;
+    }
+    return `${raw}+text`;
+  })();
 
   const edgeTrace = {
     ...(lineTemplate || {
@@ -1239,10 +2650,13 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
     x: edgeX,
     y: edgeY,
     z: edgeZ,
-    text: undefined,
+    text: edgeText,
     customdata: undefined,
     hovertext: undefined,
-    name: lineTemplate?.name || "",
+    hoverinfo: "text",
+    hovertemplate: "%{text}<extra></extra>",
+    showlegend: false,
+    name: "",
   };
 
   const nodeTrace = {
@@ -1254,15 +2668,32 @@ function buildExpandedFigureFromEdgeMap(baseFigure, nodeMap, edgeMap, rootKey = 
         color: nodeColors,
       },
       textposition: "top center",
-      textfont: { size: 10, color: "#1f2937" },
+      textfont: {
+        size: GRAPH_NODE_TEXT_SIZE_DESKTOP,
+        family: GRAPH_NODE_TEXT_FAMILY,
+        color: "#1f2937",
+      },
       hovertemplate: "%{text}<br>Role: %{customdata}<extra></extra>",
       name: "Stock Nodes",
       showlegend: false,
     }),
+    mode: nodeMode,
+    marker: {
+      ...(nodeTemplate?.marker || {}),
+      color: nodeColors,
+      size: nodeSizes,
+    },
+    textposition: nodeTemplate?.textposition || "top center",
     x: nodeX,
     y: nodeY,
     z: nodeZ,
     text: nodeText,
+    textfont: {
+      ...(nodeTemplate?.textfont || {}),
+      family: nodeTemplate?.textfont?.family || GRAPH_NODE_TEXT_FAMILY,
+      color: nodeTemplate?.textfont?.color || "#1f2937",
+      size: GRAPH_NODE_TEXT_SIZE_DESKTOP,
+    },
     customdata: nodeCustomData,
     hovertext: nodeHoverText,
     hovertemplate:
@@ -1287,6 +2718,109 @@ function convert3DTraceTo2D(trace) {
   };
 }
 
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function scaleMarkerSize(size, factor, min, max) {
+  if (Array.isArray(size)) {
+    return size.map((value) => {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return value;
+      }
+      return clampNumber(numeric * factor, min, max, numeric);
+    });
+  }
+
+  const numeric = Number(size);
+  if (!Number.isFinite(numeric)) {
+    return size;
+  }
+  return clampNumber(numeric * factor, min, max, numeric);
+}
+
+function style3DTrace(trace, isMobileViewport) {
+  if (!trace || trace.type !== "scatter3d") {
+    return trace;
+  }
+
+  const mode = String(trace.mode || "");
+  const baseHoverLabel = {
+    ...(trace.hoverlabel || {}),
+    bgcolor: trace.hoverlabel?.bgcolor || "rgba(15, 23, 42, 0.9)",
+    bordercolor: trace.hoverlabel?.bordercolor || "#0f172a",
+    font: {
+      ...(trace.hoverlabel?.font || {}),
+      color: trace.hoverlabel?.font?.color || "#f8fafc",
+      size: clampNumber(
+        trace.hoverlabel?.font?.size,
+        10,
+        13,
+        isMobileViewport ? 11 : 12,
+      ),
+    },
+  };
+
+  if (mode.includes("markers")) {
+    const marker = trace.marker || {};
+    const markerLine = marker.line || {};
+    const styledSize = scaleMarkerSize(
+      marker.size,
+      isMobileViewport ? 1.02 : 1.08,
+      isMobileViewport ? 5 : 6,
+      isMobileViewport ? 17 : 24,
+    );
+
+    return {
+      ...trace,
+      marker: {
+        ...marker,
+        size: styledSize,
+        opacity: clampNumber(marker.opacity, 0.88, 1, 0.96),
+        line: {
+          ...markerLine,
+          color: markerLine.color || "#e5edf6",
+          width: clampNumber(markerLine.width, 0.8, 2.2, 1.1),
+        },
+      },
+      textfont: {
+        ...(trace.textfont || {}),
+        family: trace.textfont?.family || GRAPH_NODE_TEXT_FAMILY,
+        color: trace.textfont?.color || "#0f172a",
+        size: isMobileViewport
+          ? GRAPH_NODE_TEXT_SIZE_MOBILE
+          : GRAPH_NODE_TEXT_SIZE_DESKTOP,
+      },
+      textposition: trace.textposition || "top center",
+      hoverlabel: baseHoverLabel,
+    };
+  }
+
+  if (mode.includes("lines")) {
+    const line = trace.line || {};
+    const baseWidth = clampNumber(line.width, 0.8, 8, 1.4);
+    return {
+      ...trace,
+      line: {
+        ...line,
+        width: clampNumber(baseWidth * 1.1, 1, 8.5, 1.6),
+      },
+      opacity: clampNumber(trace.opacity, 0.2, 0.98, 0.76),
+      hoverlabel: baseHoverLabel,
+    };
+  }
+
+  return {
+    ...trace,
+    hoverlabel: baseHoverLabel,
+  };
+}
+
 async function postGraphQuery(payload) {
   const safePayload = compactParams(payload || {});
   const cacheKey = JSON.stringify(safePayload);
@@ -1301,7 +2835,9 @@ async function postGraphQuery(payload) {
   }
 
   const requestPromise = (async () => {
-    const { signal, cleanup } = createTimedRequestSignal(GRAPH_QUERY_TIMEOUT_MS);
+    const { signal, cleanup } = createTimedRequestSignal(
+      GRAPH_QUERY_TIMEOUT_MS,
+    );
 
     try {
       const data = await requestJson("/api/graph/query", {
@@ -1410,8 +2946,10 @@ function InvestingHistoryDashboard() {
   );
   const [viewMode, setViewMode] = useState("3d");
   const [searchStock, setSearchStock] = useState(DEFAULT_INITIAL_STOCK);
-  const [searchStockQuery, setSearchStockQuery] = useState(DEFAULT_INITIAL_STOCK);
-  const [highlightHops, setHighlightHops] = useState(1);
+  const [searchStockQuery, setSearchStockQuery] = useState(
+    DEFAULT_INITIAL_STOCK,
+  );
+  const [highlightHops, setHighlightHops] = useState(0);
   const [maxEdges, setMaxEdges] = useState(SYSTEM_MAX_EDGES);
   const [dbLimit, setDbLimit] = useState("");
   const [historyLimit, setHistoryLimit] = useState(DEFAULT_HISTORY_LIMIT);
@@ -1446,7 +2984,12 @@ function InvestingHistoryDashboard() {
     }
     const seen = new Set();
     historyRows.forEach((row) => {
-      Object.keys(row).forEach((key) => seen.add(key));
+      Object.keys(row).forEach((key) => {
+        if (isFamilyRelatedHistoryColumn(key)) {
+          return;
+        }
+        seen.add(key);
+      });
     });
     return Array.from(seen);
   }, [historyRows]);
@@ -1476,6 +3019,28 @@ function InvestingHistoryDashboard() {
   const stockSuggestions = useMemo(() => allStocks, [allStocks]);
   const stockSuggestionByKey = useMemo(() => {
     const mapped = new Map();
+    const pushStock = (key, stock) => {
+      if (!key || !stock) {
+        return;
+      }
+
+      const list = mapped.get(key);
+      if (!list) {
+        mapped.set(key, [stock]);
+        return;
+      }
+
+      const duplicate = list.some(
+        (item) =>
+          String(item?.label || "") === String(stock?.label || "") &&
+          String(item?.query || item?.label || "") ===
+            String(stock?.query || stock?.label || ""),
+      );
+      if (!duplicate) {
+        list.push(stock);
+      }
+    };
+
     stockSuggestions.forEach((stock) => {
       if (!stock) {
         return;
@@ -1485,13 +3050,144 @@ function InvestingHistoryDashboard() {
         ...getCompanyMatchKeys(stock.query || stock.label),
       ]);
       keys.forEach((key) => {
-        if (key && !mapped.has(key)) {
-          mapped.set(key, stock);
-        }
+        pushStock(key, stock);
       });
     });
     return mapped;
   }, [stockSuggestions]);
+
+  const scoreStockMatchForQuery = (stock, queryValue, matchedKey = "") => {
+    if (!stock) {
+      return -Infinity;
+    }
+
+    const queryRaw = String(queryValue || "").trim();
+    const queryNormalized = normalizeCompanyName(queryRaw);
+    const queryCompact = compactCompanyKey(queryNormalized || queryRaw);
+    const queryAscii = compactAsciiKey(queryRaw);
+
+    const sourceLabel = String(stock.label || "").trim();
+    const sourceQuery = String(stock.query || sourceLabel).trim();
+    const normalizedLabel = normalizeCompanyName(sourceLabel);
+    const normalizedQuery = normalizeCompanyName(sourceQuery);
+    const compactLabel = compactCompanyKey(normalizedLabel || sourceLabel);
+    const compactQuery = compactCompanyKey(normalizedQuery || sourceQuery);
+    const leadingLabelAscii = extractLeadingAsciiToken(sourceLabel);
+    const leadingQueryAscii = extractLeadingAsciiToken(sourceQuery);
+
+    let score = 0;
+
+    if (queryNormalized && normalizedLabel === queryNormalized) {
+      score += 260;
+    }
+    if (queryNormalized && normalizedQuery === queryNormalized) {
+      score += 240;
+    }
+    if (queryCompact && compactLabel === queryCompact) {
+      score += 220;
+    }
+    if (queryCompact && compactQuery === queryCompact) {
+      score += 210;
+    }
+
+    const normalizedMatchedKey = compactCompanyKey(matchedKey);
+    if (normalizedMatchedKey) {
+      if (compactLabel === normalizedMatchedKey) {
+        score += 45;
+      }
+      if (compactQuery === normalizedMatchedKey) {
+        score += 40;
+      }
+    }
+
+    if (queryAscii) {
+      if (leadingLabelAscii && leadingLabelAscii === queryAscii) {
+        score += 190;
+      }
+      if (leadingQueryAscii && leadingQueryAscii === queryAscii) {
+        score += 180;
+      }
+      if (compactAsciiKey(sourceLabel).startsWith(queryAscii)) {
+        score += 140;
+      }
+      if (compactAsciiKey(sourceQuery).startsWith(queryAscii)) {
+        score += 130;
+      }
+      if (compactAsciiKey(sourceLabel).includes(queryAscii)) {
+        score += 95;
+      }
+      if (compactAsciiKey(sourceQuery).includes(queryAscii)) {
+        score += 90;
+      }
+
+      // Avoid mapping short latin queries (e.g. "SK") to Hangul-only phonetic names.
+      if (
+        queryAscii.length <= 3 &&
+        !hasAsciiCharacters(sourceLabel) &&
+        !hasAsciiCharacters(sourceQuery)
+      ) {
+        score -= 140;
+      }
+    }
+
+    const similarity = Math.max(
+      blendedCompanyNameSimilarity(queryCompact, compactLabel),
+      blendedCompanyNameSimilarity(queryCompact, compactQuery),
+    );
+    score += similarity * 90;
+
+    if (queryCompact && queryCompact.length <= 3) {
+      const gap = Math.min(
+        Math.abs(compactLabel.length - queryCompact.length),
+        Math.abs(compactQuery.length - queryCompact.length),
+      );
+      score -= gap * 3;
+    }
+
+    return score;
+  };
+
+  const pickBestStockCandidate = (candidates, queryValue, matchedKey = "") => {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      return null;
+    }
+
+    const ranked = candidates
+      .map((stock) => ({
+        stock,
+        score: scoreStockMatchForQuery(stock, queryValue, matchedKey),
+      }))
+      .filter((item) => Number.isFinite(item.score))
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return String(a.stock?.label || "").localeCompare(
+          String(b.stock?.label || ""),
+          "ko",
+        );
+      });
+
+    const best = ranked[0];
+    if (!best || best.score <= 0) {
+      return null;
+    }
+
+    const second = ranked[1];
+    const asciiQuery = compactAsciiKey(queryValue);
+    const isShortAscii = asciiQuery.length > 0 && asciiQuery.length <= 3;
+    const minDelta = isShortAscii ? 18 : 8;
+    const minBestScore = isShortAscii ? 150 : 90;
+    if (
+      second &&
+      best.score - second.score < minDelta &&
+      best.score < minBestScore
+    ) {
+      return null;
+    }
+
+    return best.stock;
+  };
 
   const fuzzyStockCorpus = useMemo(() => {
     return stockSuggestions
@@ -1500,6 +3196,11 @@ function InvestingHistoryDashboard() {
           return null;
         }
 
+        const primaryLabelKey = compactCompanyKey(stock.label);
+        const primaryQueryKey = compactCompanyKey(stock.query || stock.label);
+        const primaryKeySet = new Set(
+          [primaryLabelKey, primaryQueryKey].filter(Boolean),
+        );
         const variants = new Set([
           ...getCompanyMatchKeys(stock.label),
           ...getCompanyMatchKeys(stock.query || stock.label),
@@ -1511,37 +3212,86 @@ function InvestingHistoryDashboard() {
 
         const normalizedVariants = Array.from(variants)
           .map((value) => compactCompanyKey(value))
-          .filter((value) => value && value.length >= 2);
+          .filter(
+            (value) =>
+              value && (value.length >= 3 || primaryKeySet.has(value)),
+          );
+        const uniqueVariants = Array.from(new Set(normalizedVariants));
 
-        if (!normalizedVariants.length) {
+        if (!uniqueVariants.length) {
           return null;
         }
 
         return {
           stock,
-          variants: normalizedVariants,
+          variants: uniqueVariants,
         };
       })
       .filter(Boolean);
   }, [stockSuggestions]);
 
   const findMatchedStock = (value) => {
-    const keys = getCompanyMatchKeys(value);
+    const rawValue = String(value || "").trim();
+    if (!rawValue) {
+      return null;
+    }
+
+    const normalizedValue = normalizeCompanyName(rawValue);
+    const normalizedValueKey = compactCompanyKey(normalizedValue || rawValue);
+    const asciiValueKey = compactAsciiKey(rawValue);
+
+    const keys = getCompanyMatchKeys(rawValue);
     for (const key of keys) {
-      const matched = stockSuggestionByKey.get(key);
-      if (matched) {
-        return matched;
+      const matchedCandidates = stockSuggestionByKey.get(key);
+      if (!matchedCandidates || !matchedCandidates.length) {
+        continue;
+      }
+
+      const picked = pickBestStockCandidate(matchedCandidates, rawValue, key);
+      if (picked) {
+        return picked;
       }
     }
 
-    const queryVariants = new Set([
-      ...keys,
-      normalizeCompanyName(value),
-      value,
-    ]);
+    // Short latin queries are high-collision. Resolve only from visible ASCII forms.
+    if (asciiValueKey && asciiValueKey.length <= 3) {
+      const shortAsciiCandidates = stockSuggestions.filter((stock) => {
+        if (!stock) {
+          return false;
+        }
+        const label = String(stock.label || "");
+        const query = String(stock.query || stock.label || "");
+        const leadingLabel = extractLeadingAsciiToken(label);
+        const leadingQuery = extractLeadingAsciiToken(query);
+        const compactLabel = compactAsciiKey(label);
+        const compactQuery = compactAsciiKey(query);
+        return (
+          leadingLabel.startsWith(asciiValueKey) ||
+          leadingQuery.startsWith(asciiValueKey) ||
+          compactLabel.startsWith(asciiValueKey) ||
+          compactQuery.startsWith(asciiValueKey)
+        );
+      });
+
+      const pickedShortAscii = pickBestStockCandidate(
+        shortAsciiCandidates,
+        rawValue,
+        asciiValueKey,
+      );
+      if (pickedShortAscii) {
+        return pickedShortAscii;
+      }
+
+      return null;
+    }
+
+    const queryVariants = new Set([...keys, normalizedValue, rawValue]);
     const normalizedQueryVariants = Array.from(queryVariants)
       .map((item) => compactCompanyKey(item))
-      .filter((item) => item && item.length >= 2);
+      .filter(
+        (item) =>
+          item && (item.length >= 3 || item === normalizedValueKey),
+      );
 
     if (!normalizedQueryVariants.length || !fuzzyStockCorpus.length) {
       return null;
@@ -1554,7 +3304,10 @@ function InvestingHistoryDashboard() {
       let localBest = 0;
       for (const queryVariant of normalizedQueryVariants) {
         for (const stockVariant of entry.variants) {
-          const score = blendedCompanyNameSimilarity(queryVariant, stockVariant);
+          const score = blendedCompanyNameSimilarity(
+            queryVariant,
+            stockVariant,
+          );
           if (score > localBest) {
             localBest = score;
           }
@@ -1587,7 +3340,8 @@ function InvestingHistoryDashboard() {
       return;
     }
 
-    const normalizedQuery = String(query || normalizedLabel).trim() || normalizedLabel;
+    const normalizedQuery =
+      String(query || normalizedLabel).trim() || normalizedLabel;
     const normalizedSnapshot = clampToSliderDateRange(
       snapshot || resolvedSnapshotDate || snapshotDate,
     );
@@ -1643,7 +3397,10 @@ function InvestingHistoryDashboard() {
     if (!activeSnapshotDates.length) {
       return "";
     }
-    if (resolvedSnapshotDate && activeSnapshotDates.includes(resolvedSnapshotDate)) {
+    if (
+      resolvedSnapshotDate &&
+      activeSnapshotDates.includes(resolvedSnapshotDate)
+    ) {
       return resolvedSnapshotDate;
     }
     return "";
@@ -1660,7 +3417,9 @@ function InvestingHistoryDashboard() {
     return activeSnapshotDates.map((date, index) => {
       const day = isoDateToUtcDay(date);
       const leftPct = SNAPSHOT_SLIDER_DAY_SPAN
-        ? ((clampSliderUtcDay(day) - SNAPSHOT_SLIDER_MIN_DAY) / SNAPSHOT_SLIDER_DAY_SPAN) * 100
+        ? ((clampSliderUtcDay(day) - SNAPSHOT_SLIDER_MIN_DAY) /
+            SNAPSHOT_SLIDER_DAY_SPAN) *
+          100
         : 0;
       return {
         key: `${date}-${index}`,
@@ -1673,29 +3432,28 @@ function InvestingHistoryDashboard() {
   const plotData = useMemo(() => {
     const rawData = Array.isArray(figure.data) ? figure.data : [];
     const normalizedData = rawData.map(normalizeTraceLabel);
-    const convertedData = viewMode === "3d"
-      ? normalizedData
-      : normalizedData.map(convert3DTraceTo2D);
-
-    if (!isMobileViewport) {
-      return convertedData;
-    }
-
-    const mobileTextSize = viewMode === "3d" ? 9 : 8;
-    return convertedData.map((trace) => {
+    const convertedData =
+      viewMode === "3d"
+        ? normalizedData
+        : normalizedData.map(convert3DTraceTo2D);
+    const styledData =
+      viewMode === "3d"
+        ? convertedData.map((trace) => style3DTrace(trace, isMobileViewport))
+        : convertedData;
+    const desiredTextSize = isMobileViewport
+      ? GRAPH_NODE_TEXT_SIZE_MOBILE
+      : GRAPH_NODE_TEXT_SIZE_DESKTOP;
+    return styledData.map((trace) => {
       const mode = String(trace?.mode || "");
       if (!mode.includes("text")) {
         return trace;
       }
-      const currentSize = Number(trace?.textfont?.size);
-      const nextSize = Number.isFinite(currentSize)
-        ? Math.min(currentSize, mobileTextSize)
-        : mobileTextSize;
       return {
         ...trace,
         textfont: {
           ...(trace?.textfont || {}),
-          size: nextSize,
+          family: GRAPH_NODE_TEXT_FAMILY,
+          size: desiredTextSize,
         },
       };
     });
@@ -1729,28 +3487,20 @@ function InvestingHistoryDashboard() {
         }
       : rawLegend;
     const mobileTitle = isMobileViewport
-      ? (typeof rawLayout.title === "string"
+      ? typeof rawLayout.title === "string"
+        ? {
+            text: rawLayout.title,
+            font: { size: 12 },
+          }
+        : rawLayout.title && typeof rawLayout.title === "object"
           ? {
-              text: rawLayout.title,
-              x: 0.5,
-              xanchor: "center",
-              y: 0.99,
-              yanchor: "top",
-              font: { size: 12 },
+              ...rawLayout.title,
+              font: {
+                ...(rawLayout.title.font || {}),
+                size: Math.min(Number(rawLayout.title.font?.size) || 14, 12),
+              },
             }
-          : rawLayout.title && typeof rawLayout.title === "object"
-            ? {
-                ...rawLayout.title,
-                x: rawLayout.title.x ?? 0.5,
-                xanchor: rawLayout.title.xanchor || "center",
-                y: rawLayout.title.y ?? 0.99,
-                yanchor: rawLayout.title.yanchor || "top",
-                font: {
-                  ...(rawLayout.title.font || {}),
-                  size: Math.min(Number(rawLayout.title.font?.size) || 14, 12),
-                },
-              }
-            : rawLayout.title)
+          : rawLayout.title
       : rawLayout.title;
     const mobileMargin = isMobileViewport
       ? {
@@ -1769,6 +3519,26 @@ function InvestingHistoryDashboard() {
       title: mobileTitle,
       legend: mobileLegend,
       margin: mobileMargin,
+      font: {
+        ...(rawLayout.font || {}),
+        family: rawLayout.font?.family || GRAPH_NODE_TEXT_FAMILY,
+        color: rawLayout.font?.color || "#1e293b",
+      },
+      hoverlabel: {
+        ...(rawLayout.hoverlabel || {}),
+        bgcolor: rawLayout.hoverlabel?.bgcolor || "rgba(15, 23, 42, 0.9)",
+        bordercolor: rawLayout.hoverlabel?.bordercolor || "#0f172a",
+        font: {
+          ...(rawLayout.hoverlabel?.font || {}),
+          color: rawLayout.hoverlabel?.font?.color || "#f8fafc",
+          size: clampNumber(
+            rawLayout.hoverlabel?.font?.size,
+            10,
+            13,
+            isMobileViewport ? 11 : 12,
+          ),
+        },
+      },
     };
 
     if (viewMode === "3d") {
@@ -1776,9 +3546,9 @@ function InvestingHistoryDashboard() {
       const subtleGridAxisStyle = {
         visible: true,
         showbackground: true,
-        backgroundcolor: "#f8fafc",
+        backgroundcolor: "#ffffff",
         showgrid: true,
-        gridcolor: "#e2e8f0",
+        gridcolor: "#d8e2ee",
         gridwidth: 1,
         zeroline: false,
         showline: false,
@@ -1798,9 +3568,15 @@ function InvestingHistoryDashboard() {
       let span = 1;
 
       if (bounds) {
-        centerX = focusedPoint ? focusedPoint.x : (bounds.minX + bounds.maxX) / 2;
-        centerY = focusedPoint ? focusedPoint.y : (bounds.minY + bounds.maxY) / 2;
-        centerZ = focusedPoint ? focusedPoint.z : (bounds.minZ + bounds.maxZ) / 2;
+        centerX = focusedPoint
+          ? focusedPoint.x
+          : (bounds.minX + bounds.maxX) / 2;
+        centerY = focusedPoint
+          ? focusedPoint.y
+          : (bounds.minY + bounds.maxY) / 2;
+        centerZ = focusedPoint
+          ? focusedPoint.z
+          : (bounds.minZ + bounds.maxZ) / 2;
 
         const xHalfSpan = Math.max(
           Math.abs(bounds.maxX - centerX),
@@ -1826,22 +3602,44 @@ function InvestingHistoryDashboard() {
           xaxis: {
             ...(scene.xaxis || {}),
             ...subtleGridAxisStyle,
+            backgroundcolor: "#ffffff",
             range: [centerX - span, centerX + span],
           },
           yaxis: {
             ...(scene.yaxis || {}),
             ...subtleGridAxisStyle,
+            backgroundcolor: "#ffffff",
             range: [centerY - span, centerY + span],
           },
           zaxis: {
             ...(scene.zaxis || {}),
             ...subtleGridAxisStyle,
+            backgroundcolor: "#ffffff",
             range: [centerZ - span, centerZ + span],
           },
           aspectmode: "cube",
+          aspectratio: {
+            x: 1,
+            y: 1,
+            z: 0.9,
+          },
           camera: {
             ...(scene.camera || {}),
             center: { x: 0, y: 0, z: 0 },
+            eye: {
+              x: Number(scene.camera?.eye?.x) * 1.05 || 1.28,
+              y: Number(scene.camera?.eye?.y) * 1.05 || 1.28,
+              z: Number(scene.camera?.eye?.z) * 1.05 || 1.06,
+            },
+            up: {
+              x: 0,
+              y: 0,
+              z: 1,
+            },
+            projection: {
+              ...(scene.camera?.projection || {}),
+              type: "orthographic",
+            },
           },
         },
       };
@@ -1873,7 +3671,14 @@ function InvestingHistoryDashboard() {
       },
       hovermode: restLayout.hovermode || "closest",
     };
-  }, [figure.layout, isMobileViewport, plotData, searchStock, searchStockQuery, viewMode]);
+  }, [
+    figure.layout,
+    isMobileViewport,
+    plotData,
+    searchStock,
+    searchStockQuery,
+    viewMode,
+  ]);
 
   const plotConfig = useMemo(
     () => ({
@@ -1903,12 +3708,10 @@ function InvestingHistoryDashboard() {
       );
       const requestedSearchLabel = options.searchStockLabel ?? searchStock;
       const requestedSearchQuery = options.searchStockQuery ?? searchStockQuery;
-      const effectiveStartDate = startDate && endDate && startDate > endDate
-        ? endDate
-        : startDate;
-      const effectiveEndDate = startDate && endDate && endDate < startDate
-        ? startDate
-        : endDate;
+      const effectiveStartDate =
+        startDate && endDate && startDate > endDate ? endDate : startDate;
+      const effectiveEndDate =
+        startDate && endDate && endDate < startDate ? startDate : endDate;
       const typedSearch = requestedSearchLabel.trim();
       const matchedStock = findMatchedStock(typedSearch);
       const searchStockForQuery =
@@ -1938,7 +3741,10 @@ function InvestingHistoryDashboard() {
         : activeSnapshotDates;
       const effectiveSnapshotDate = shouldUseLatestSnapshot
         ? null
-        : resolveSnapshotDateForSelectedDate(snapshotDatesForQuery, requestedSliderDate);
+        : resolveSnapshotDateForSelectedDate(
+            snapshotDatesForQuery,
+            requestedSliderDate,
+          );
 
       const deriveReverseSearchCandidates = (selectedLabel) => {
         const selectedNormalized = normalizeCompanyName(selectedLabel);
@@ -1949,13 +3755,16 @@ function InvestingHistoryDashboard() {
 
         const candidates = new Map();
         const registerCandidate = (candidateLabel, candidateQuery = "") => {
-          const normalized = normalizeCompanyName(candidateLabel || candidateQuery);
+          const normalized = normalizeCompanyName(
+            candidateLabel || candidateQuery,
+          );
           const key = toComparableCompanyKey(normalized);
           if (!key || key === selectedKey || candidates.has(key)) {
             return;
           }
 
-          const mapped = stockSuggestionByKey.get(key);
+          const mappedList = stockSuggestionByKey.get(key);
+          const mapped = Array.isArray(mappedList) ? mappedList[0] : null;
           candidates.set(key, {
             label: mapped?.label || normalized,
             query: mapped?.query || candidateQuery || normalized,
@@ -1964,7 +3773,11 @@ function InvestingHistoryDashboard() {
 
         stockSuggestions.forEach((stock) => {
           const stockKey = toComparableCompanyKey(stock?.label);
-          if (stockKey && selectedKey.startsWith(stockKey) && stockKey !== selectedKey) {
+          if (
+            stockKey &&
+            selectedKey.startsWith(stockKey) &&
+            stockKey !== selectedKey
+          ) {
             registerCandidate(stock.label, stock.query || stock.label);
           }
         });
@@ -1990,8 +3803,12 @@ function InvestingHistoryDashboard() {
         return Array.from(candidates.values()).slice(0, 4);
       };
 
-      const reverseSearchCandidates = deriveReverseSearchCandidates(typedSearch);
-      const requestedHopDepth = Math.max(0, Number(highlightHops || 1));
+      const requestedHopDepthRaw = Number(highlightHops ?? 0);
+      const requestedHopDepth = Number.isFinite(requestedHopDepthRaw)
+        ? Math.max(0, requestedHopDepthRaw)
+        : 0;
+      const reverseSearchCandidates =
+        requestedHopDepth > 0 ? deriveReverseSearchCandidates(typedSearch) : [];
       const shouldIncludeInboundToRoot =
         Boolean(searchStockForQuery) && requestedHopDepth >= 1;
       const effectiveHopDepth = shouldIncludeInboundToRoot
@@ -2006,7 +3823,10 @@ function InvestingHistoryDashboard() {
         : null;
       const effectiveHistoryLimit = Math.max(
         1,
-        Math.min(Number(historyLimit || DEFAULT_HISTORY_LIMIT), SYSTEM_MAX_HISTORY_LIMIT),
+        Math.min(
+          Number(historyLimit || DEFAULT_HISTORY_LIMIT),
+          SYSTEM_MAX_HISTORY_LIMIT,
+        ),
       );
       const payload = {
         start_date: effectiveStartDate || SNAPSHOT_RANGE_START,
@@ -2042,7 +3862,11 @@ function InvestingHistoryDashboard() {
 
         setFigure(figureOverride || data.figure || { data: [], layout: {} });
         setHistoryRows(extractHistoryRows(data));
-        setTopEdges(Array.isArray(topEdgesOverride) ? topEdgesOverride : extractTopEdges(data));
+        setTopEdges(
+          Array.isArray(topEdgesOverride)
+            ? topEdgesOverride
+            : extractTopEdges(data),
+        );
         setStatusText(statusOverride || data.status_text || "");
         setResolvedSnapshotDate(serverSnapshotDate);
         setSnapshotDates(dates);
@@ -2078,19 +3902,275 @@ function InvestingHistoryDashboard() {
         }
       };
 
-      const shouldUseClientHopExpansion = Boolean(searchStockForQuery) && (
-        effectiveHopDepth > 1 || reverseSearchCandidates.length > 0
-      );
+      const buildCenterOnlyGraphOverride = (data, centerLabel) => {
+        const centerNormalized = normalizeCompanyName(centerLabel);
+        const centerKey = toComparableCompanyKey(centerNormalized);
+        if (!centerKey) {
+          return null;
+        }
+
+        const nodeMap = extractNodePointsFromFigureData(data?.figure?.data);
+        const historyRows = extractHistoryRows(data);
+        const normalizedTopEdges = extractNormalizedTopEdges(data?.top_edges);
+        if (!nodeMap.size || !normalizedTopEdges.length) {
+          return null;
+        }
+
+        const allCenterEdges = normalizedTopEdges.filter(
+          (edge) => edge.srcKey === centerKey || edge.dstKey === centerKey,
+        );
+        if (!allCenterEdges.length) {
+          return null;
+        }
+
+        const outboundCenterEdgeKeys = collectOutboundCenterEdgeKeysFromHistoryRows(
+          historyRows,
+          centerNormalized,
+        );
+        const centerEdges = allCenterEdges.filter(
+          (edge) => !outboundCenterEdgeKeys.has(`${edge.srcKey}->${edge.dstKey}`),
+        );
+        const filteredOutboundCount = allCenterEdges.length - centerEdges.length;
+
+        if (!centerEdges.length) {
+          const centerDisplayLabel =
+            centerNormalized || String(centerLabel || "").trim() || centerKey;
+          const centerNode = nodeMap.get(centerKey) || {
+            key: centerKey,
+            label: centerDisplayLabel,
+            fullLabel: centerDisplayLabel,
+            x: 0,
+            y: 0,
+            z: 0,
+          };
+          const centerOnlyNodeMap = new Map([[centerKey, centerNode]]);
+          const figureOverride = buildExpandedFigureFromEdgeMap(
+            data.figure,
+            centerOnlyNodeMap,
+            new Map(),
+            centerKey,
+          );
+          const statusSuffix =
+            filteredOutboundCount > 0
+              ? ` | Center focus: ${centerDisplayLabel} | Filtered outbound: ${filteredOutboundCount}`
+              : ` | Center focus: ${centerDisplayLabel}`;
+
+          return {
+            figureOverride,
+            topEdgesRows: [],
+            statusOverride: `${data?.status_text || ""}${statusSuffix}`,
+          };
+        }
+
+        const edgeMap = new Map();
+        const connectedNodeKeys = new Set([centerKey]);
+        centerEdges.forEach((edge) => {
+          edgeMap.set(`${edge.srcKey}->${edge.dstKey}`, edge);
+          connectedNodeKeys.add(edge.srcKey);
+          connectedNodeKeys.add(edge.dstKey);
+        });
+
+        const focusedNodeMap = new Map();
+        connectedNodeKeys.forEach((key) => {
+          const node = nodeMap.get(key);
+          if (node) {
+            focusedNodeMap.set(key, node);
+          }
+        });
+
+        const figureOverride = buildExpandedFigureFromEdgeMap(
+          data.figure,
+          focusedNodeMap.size ? focusedNodeMap : nodeMap,
+          edgeMap,
+          centerKey,
+        );
+        const topEdgesRows = centerEdges
+          .slice()
+          .sort((a, b) => Number(b.weight || 0) - Number(a.weight || 0))
+          .slice(0, 20)
+          .map((edge) => ({
+            src: edge.srcLabel,
+            dst: edge.dstLabel,
+            weight: Number(edge.weight || 0),
+          }));
+        const statusSuffix =
+          filteredOutboundCount > 0
+            ? ` | Center focus: ${centerNormalized} | Filtered outbound: ${filteredOutboundCount}`
+            : ` | Center focus: ${centerNormalized}`;
+
+        return {
+          figureOverride,
+          topEdgesRows,
+          statusOverride: `${data?.status_text || ""}${statusSuffix}`,
+        };
+      };
+
+      const shouldUseClientHopExpansion =
+        Boolean(searchStockForQuery) && effectiveHopDepth > 1;
 
       if (!shouldUseClientHopExpansion) {
         const data = await postGraphQuery(payload);
-        applyGraphStateAndTrack(data, null, "", stockSnapshotDates);
+        const noEdges = Number(data?.edges_shown) <= 0;
+        if (searchStockForQuery && noEdges) {
+          const fallbackPayload = {
+            ...payload,
+            search_stock: null,
+            history_limit: SYSTEM_MAX_HISTORY_LIMIT,
+          };
+          const buildFallbackResult = (candidateData, fallbackDate = "") => {
+            const candidateGraph = buildFallbackGraphFromHistory({
+              historyRows: extractHistoryRows(candidateData),
+              searchLabel: resolvedSearchLabel || searchStockForQuery,
+              baseFigure: candidateData.figure || data.figure,
+              maxEdges: effectiveMaxEdges,
+              historyLimit: effectiveHistoryLimit,
+            });
+            if (!candidateGraph) {
+              return null;
+            }
+
+            const statusDate =
+              String(fallbackDate || candidateData?.snapshot_date || "").trim();
+            const statusSuffix = statusDate
+              ? ` | Nearest snapshot: ${statusDate}`
+              : "";
+
+            return {
+              data: candidateData,
+              graph: candidateGraph,
+              status: `${
+                candidateData?.status_text || data?.status_text || ""
+              } | Fallback links: ${candidateGraph.rootDisplayLabel}${statusSuffix}`,
+            };
+          };
+
+          const fallbackData = await postGraphQuery(fallbackPayload);
+          let fallbackResult = buildFallbackResult(
+            fallbackData,
+            fallbackData?.snapshot_date || effectiveSnapshotDate,
+          );
+
+          if (!fallbackResult) {
+            const snapshotUniverse = normalizeSnapshotDateList(
+              fallbackData?.snapshot_dates?.length
+                ? fallbackData.snapshot_dates
+                : snapshotDatesForQuery,
+            );
+            const anchorSnapshotDate =
+              String(
+                fallbackData?.snapshot_date ||
+                  effectiveSnapshotDate ||
+                  requestedSliderDate,
+              ).trim() || requestedSliderDate;
+            const nearbyCandidates = buildNearestSnapshotCandidates(
+              snapshotUniverse,
+              anchorSnapshotDate,
+              24,
+            ).filter((candidateDate) => candidateDate !== anchorSnapshotDate);
+
+            for (const candidateDate of nearbyCandidates) {
+              const candidateData = await postGraphQuery({
+                ...fallbackPayload,
+                snapshot_date: candidateDate,
+              });
+              fallbackResult = buildFallbackResult(candidateData, candidateDate);
+              if (fallbackResult) {
+                break;
+              }
+            }
+          }
+
+          if (fallbackResult) {
+            const fallbackStockDates = stockSnapshotDates.length
+              ? normalizeSnapshotDateList([
+                  ...stockSnapshotDates,
+                  fallbackResult.data?.snapshot_date,
+                ])
+              : normalizeSnapshotDateList(fallbackResult.data?.snapshot_dates);
+
+            applyGraphStateAndTrack(
+              {
+                ...fallbackResult.data,
+                investing_history: fallbackResult.graph.filteredHistoryRows,
+              },
+              fallbackResult.graph.figureOverride,
+              fallbackResult.status,
+              fallbackStockDates,
+              fallbackResult.graph.topEdgesRows,
+            );
+            return;
+          }
+        }
+
+        if (requestedHopDepth === 0 && searchStockForQuery) {
+          const selectedForCoverage = resolvedSearchLabel || searchStockForQuery;
+          const filteredHistoryRows = extractHistoryRows(data);
+          const historyCounterpartyKeys =
+            extractRelatedCounterpartyKeysFromHistoryRows(
+              filteredHistoryRows,
+              selectedForCoverage,
+            );
+          const topEdgeCounterpartyKeys = extractRelatedCounterpartyKeysFromTopEdges(
+            extractTopEdges(data),
+            selectedForCoverage,
+          );
+
+          let missingCounterpartyCount = 0;
+          historyCounterpartyKeys.forEach((key) => {
+            if (!topEdgeCounterpartyKeys.has(key)) {
+              missingCounterpartyCount += 1;
+            }
+          });
+
+          if (missingCounterpartyCount > 0) {
+            const historyGraph = buildFallbackGraphFromHistory({
+              historyRows: filteredHistoryRows,
+              searchLabel: selectedForCoverage,
+              baseFigure: data.figure,
+              maxEdges: effectiveMaxEdges,
+              historyLimit: effectiveHistoryLimit,
+            });
+            if (historyGraph) {
+              const statusSuffix = ` | History graph supplement: +${missingCounterpartyCount} related nodes`;
+              applyGraphStateAndTrack(
+                data,
+                historyGraph.figureOverride,
+                `${data?.status_text || ""}${statusSuffix}`,
+                stockSnapshotDates,
+                historyGraph.topEdgesRows,
+              );
+              return;
+            }
+          }
+
+          const centered = buildCenterOnlyGraphOverride(
+            data,
+            selectedForCoverage,
+          );
+          if (centered) {
+            applyGraphStateAndTrack(
+              data,
+              centered.figureOverride,
+              centered.statusOverride,
+              stockSnapshotDates,
+              centered.topEdgesRows,
+            );
+          } else {
+            applyGraphStateAndTrack(data, null, "", stockSnapshotDates);
+          }
+        } else {
+          applyGraphStateAndTrack(data, null, "", stockSnapshotDates);
+        }
       } else {
         const resolveStockForHop = (label, queryHint = "") => {
           const normalizedLabel = normalizeCompanyName(label || queryHint);
-          const matched = findMatchedStock(normalizedLabel) || findMatchedStock(queryHint);
+          const matched =
+            findMatchedStock(normalizedLabel) || findMatchedStock(queryHint);
           return {
-            label: matched?.label || normalizedLabel || String(queryHint || "").trim(),
+            label:
+              matched?.label ||
+              normalizedLabel ||
+              String(queryHint || "").trim(),
             query:
               matched?.query ||
               String(queryHint || "").trim() ||
@@ -2144,7 +4224,9 @@ function InvestingHistoryDashboard() {
               baseData = hopData;
             }
 
-            const hopNodes = extractNodePointsFromFigureData(hopData.figure?.data);
+            const hopNodes = extractNodePointsFromFigureData(
+              hopData.figure?.data,
+            );
             hopNodes.forEach((node, nodeKey) => {
               if (!aggregatedNodes.has(nodeKey)) {
                 aggregatedNodes.set(nodeKey, node);
@@ -2170,7 +4252,10 @@ function InvestingHistoryDashboard() {
 
               if (level < hopDepth - 1) {
                 [edge.srcLabel, edge.dstLabel].forEach((endpointLabel) => {
-                  const endpoint = resolveStockForHop(endpointLabel, endpointLabel);
+                  const endpoint = resolveStockForHop(
+                    endpointLabel,
+                    endpointLabel,
+                  );
                   const endpointKey = toComparableCompanyKey(endpoint.label);
                   if (!endpointKey || visitedKeys.has(endpointKey)) {
                     return;
@@ -2251,22 +4336,23 @@ function InvestingHistoryDashboard() {
     stockFetchSeqRef.current = fetchId;
     setStockSearchLoading(true);
 
-    const effectiveStartDate = startDate && endDate && startDate > endDate
-      ? endDate
-      : startDate;
-    const effectiveEndDate = startDate && endDate && endDate < startDate
-      ? startDate
-      : endDate;
+    const effectiveStartDate =
+      startDate && endDate && startDate > endDate ? endDate : startDate;
+    const effectiveEndDate =
+      startDate && endDate && endDate < startDate ? startDate : endDate;
 
     try {
-      const data = await fetchStockOptions({
-        start_date: effectiveStartDate || SNAPSHOT_RANGE_START,
-        end_date: effectiveEndDate || SNAPSHOT_RANGE_END,
-        include_periodic_status: Boolean(includePeriodicStatus),
-        include_majorstock_status: Boolean(includeMajorstockStatus),
-        q: undefined,
-        limit: STOCK_OPTIONS_LIMIT,
-      }, controller.signal);
+      const data = await fetchStockOptions(
+        {
+          start_date: effectiveStartDate || SNAPSHOT_RANGE_START,
+          end_date: effectiveEndDate || SNAPSHOT_RANGE_END,
+          include_periodic_status: Boolean(includePeriodicStatus),
+          include_majorstock_status: Boolean(includeMajorstockStatus),
+          q: undefined,
+          limit: STOCK_OPTIONS_LIMIT,
+        },
+        controller.signal,
+      );
 
       if (fetchId !== stockFetchSeqRef.current) {
         return;
@@ -2350,7 +4436,10 @@ function InvestingHistoryDashboard() {
     if (!Number.isFinite(offset)) {
       return;
     }
-    const clampedOffset = Math.max(0, Math.min(Math.round(offset), SNAPSHOT_SLIDER_DAY_SPAN));
+    const clampedOffset = Math.max(
+      0,
+      Math.min(Math.round(offset), SNAPSHOT_SLIDER_DAY_SPAN),
+    );
     const nextDate = sliderOffsetToIsoDate(clampedOffset);
     setSnapshotSliderOffset(clampedOffset);
     setSnapshotDate(nextDate);
@@ -2481,7 +4570,10 @@ function InvestingHistoryDashboard() {
 
       const nextLabel = matchedStock.label;
       const nextQuery = matchedStock.query || matchedStock.label;
-      if (toComparableCompanyKey(nextLabel) === toComparableCompanyKey(searchStock)) {
+      if (
+        toComparableCompanyKey(nextLabel) ===
+        toComparableCompanyKey(searchStock)
+      ) {
         return;
       }
 
@@ -2531,7 +4623,10 @@ function InvestingHistoryDashboard() {
                     }
                   }}
                   onBlur={() => {
-                    stockBlurTimerRef.current = setTimeout(closeStockDropdown, 120);
+                    stockBlurTimerRef.current = setTimeout(
+                      closeStockDropdown,
+                      120,
+                    );
                   }}
                   onKeyDown={handleStockInputKeyDown}
                   placeholder="종목 검색 또는 리스트에서 선택"
@@ -2581,7 +4676,10 @@ function InvestingHistoryDashboard() {
             <label className="investing-history-control-label grow snapshot-navigator-control">
               Snapshot Navigator
               <div className="investing-history-snapshot-slider-wrap">
-                <div className="investing-history-snapshot-markers" aria-hidden="true">
+                <div
+                  className="investing-history-snapshot-markers"
+                  aria-hidden="true"
+                >
                   {snapshotMarkers.map((marker) => (
                     <span
                       key={marker.key}
@@ -2603,7 +4701,8 @@ function InvestingHistoryDashboard() {
                 />
               </div>
               <div className="investing-history-snapshot-label">
-                As-Of Snapshot Date: {resolvedSnapshotDate || mappedSnapshotDate || "No snapshot"}
+                As-Of Snapshot Date:{" "}
+                {resolvedSnapshotDate || mappedSnapshotDate || "No snapshot"}
               </div>
             </label>
             <label className="investing-history-control-label snapshot-date-picker">
@@ -2627,7 +4726,9 @@ function InvestingHistoryDashboard() {
                 max={3}
                 step={1}
                 value={highlightHops}
-                onChange={(event) => setHighlightHops(Number(event.target.value))}
+                onChange={(event) =>
+                  setHighlightHops(Number(event.target.value))
+                }
               />
             </label>
             <label className="investing-history-control-label max-edges-control quick-max-edges">
@@ -2654,7 +4755,11 @@ function InvestingHistoryDashboard() {
               className="investing-history-control-label view-mode-control quick-view-mode"
               aria-label="Graph View Mode"
             >
-              <div className="investing-history-view-toggle" role="group" aria-label="Graph View Mode">
+              <div
+                className="investing-history-view-toggle"
+                role="group"
+                aria-label="Graph View Mode"
+              >
                 <button
                   type="button"
                   className={`investing-history-view-button ${
@@ -2697,7 +4802,9 @@ function InvestingHistoryDashboard() {
                     min={SNAPSHOT_SLIDER_MIN_DATE}
                     max={SNAPSHOT_SLIDER_MAX_DATE}
                     onChange={(event) => {
-                      const nextDate = clampToSliderDateRange(event.target.value);
+                      const nextDate = clampToSliderDateRange(
+                        event.target.value,
+                      );
                       setStartDate(nextDate);
                       if (endDate && nextDate > endDate) {
                         setEndDate(nextDate);
@@ -2713,7 +4820,9 @@ function InvestingHistoryDashboard() {
                     min={SNAPSHOT_SLIDER_MIN_DATE}
                     max={SNAPSHOT_SLIDER_MAX_DATE}
                     onChange={(event) => {
-                      const nextDate = clampToSliderDateRange(event.target.value);
+                      const nextDate = clampToSliderDateRange(
+                        event.target.value,
+                      );
                       setEndDate(nextDate);
                       if (startDate && nextDate < startDate) {
                         setStartDate(nextDate);
@@ -2773,7 +4882,9 @@ function InvestingHistoryDashboard() {
                       <input
                         type="checkbox"
                         checked={includePeriodicStatus}
-                        onChange={(event) => setIncludePeriodicStatus(event.target.checked)}
+                        onChange={(event) =>
+                          setIncludePeriodicStatus(event.target.checked)
+                        }
                       />
                       <span>Periodic</span>
                     </label>
@@ -2781,7 +4892,9 @@ function InvestingHistoryDashboard() {
                       <input
                         type="checkbox"
                         checked={includeMajorstockStatus}
-                        onChange={(event) => setIncludeMajorstockStatus(event.target.checked)}
+                        onChange={(event) =>
+                          setIncludeMajorstockStatus(event.target.checked)
+                        }
                       />
                       <span>Majorstock</span>
                     </label>
@@ -2814,9 +4927,12 @@ function InvestingHistoryDashboard() {
 
         <div className="investing-history-status">
           {loading ? "Loading..." : statusText}
-          {error ? <div className="investing-history-error">{error}</div> : null}
+          {error ? (
+            <div className="investing-history-error">{error}</div>
+          ) : null}
           <div className="investing-history-snapshot-label">
-            As-Of Snapshot Date: {resolvedSnapshotDate || mappedSnapshotDate || "None"}
+            As-Of Snapshot Date:{" "}
+            {resolvedSnapshotDate || mappedSnapshotDate || "None"}
           </div>
           <div className="investing-history-summary-chips">
             <span className="investing-history-summary-chip">
@@ -2846,7 +4962,7 @@ function InvestingHistoryDashboard() {
                   <tr key={`investing-history-row-${rowIndex}`}>
                     {historyColumns.map((column) => (
                       <td key={`${column}-${rowIndex}`}>
-                        {formatCellValue(row[column], column)}
+                        {formatCellValue(row[column], column, row)}
                       </td>
                     ))}
                   </tr>
@@ -2882,7 +4998,9 @@ function InvestingHistoryDashboard() {
               </tbody>
             </table>
           ) : (
-            <div className="investing-history-empty">No top edges available.</div>
+            <div className="investing-history-empty">
+              No top edges available.
+            </div>
           )}
         </div>
 
